@@ -29,10 +29,9 @@ app.use(express.json());
 
 // MongoDB 연결 설정
 const connectUri =
-  "mongodb+srv://fitweather33:0i9znTMj22IV0a8D@cluster0.ehwrc44.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-mongoose
-  .connect(connectUri, { useNewUrlParser: true, useUnifiedTopology: true }) //
-  .then(() => console.log("Successfully Connected!")) //
+  "mongodb+srv://fitweather33:0i9znTMj22IV0a8D@cluster0.ehwrc44.mongodb.net/fitweather?retryWrites=true&w=majority&appName=Cluster0";
+mongoose.connect(connectUri) //
+  .then(() => console.log("몽고디비 연결 성공!")) //
   .catch((err) => console.log(err.message));
 
 //// >>>>> 예은님 부분 시작 - 회원가입, 로그인
@@ -69,11 +68,34 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // codiWrite POST 요청 핸들러
-app.post("/codiWrite", upload.single("image"), (req, res) => {
-  console.log("codiWrite 잘 돌아감");
-  console.log("File:", req.file); // 업로드된 파일 정보
-  console.log("Content:", req.body.content); // FormData에서 전송된 content
-  console.log("Tags:", req.body.tag); // FormData에서 전송된 tag 배열
+
+const CodiLogModel = require("./models/codiLog"); // CodiLog 모델을 가져옴
+
+app.post("/codiWrite", upload.single("file"), async (req, res) => {
+  // console.log("codiWrite 잘 돌아감", req.file, req.body);
+
+  const { memo, tag } = req.body;
+  const { filename, path } = req.file;
+  console.log("codiWrite 잘 돌아감", memo, tag, filename, path);
+
+  //⚡︎⚡︎ 로그인 기능 합쳐지면 token 해석이 됐을 때만 실행되도록 수정하기
+  try {
+    // 새로운 포스트 문서를 생성합니다.
+    const codiDoc = await CodiLogModel.create({
+      image: path,
+      tag,
+      memo,
+      temp: null,
+      sky: null,
+      author: null,
+    });
+
+    // 생성된 포스트 문서를 JSON 형태로 클라이언트에 응답으로 보냅니다.
+    res.json(codiDoc);
+  } catch (error) {
+    console.error(error);//백 터미널 출력
+    res.status(500).json({ error: "Internal Server Error" });//프론 콘솔 출력
+  }
 });
 
 //// <<<<<<< 나영 부분 끝

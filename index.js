@@ -3,9 +3,8 @@ const fs = require('fs'); // Node.js의 파일 시스템 모듈
 const express = require("express"); // Express 웹 프레임워크
 const cors = require("cors"); // CORS 관련 미들웨어
 const mongoose = require("mongoose"); // MongoDB와 연결하기 위한 Mongoose ORM
-const bodyParser = require("body-parser"); // 요청의 본문을 파싱하기 위한 미들웨어
-const path = require("path"); // 파일 경로 조작을 위한 Node.js 모듈
 const authRoutes = require("./routes/auth"); // 인증 관련 라우트 파일
+const multer = require('multer'); // 파일 업로드를 위한 multer
 
 const app = express(); // Express 애플리케이션 생성
 const port = 8080; // 서버가 리스닝할 포트 번호
@@ -28,9 +27,17 @@ app.use(express.json());
 
 // MongoDB 연결 설정
 const connectUri = "mongodb+srv://fitweather33:0i9znTMj22IV0a8D@cluster0.ehwrc44.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-mongoose.connect(connectUri, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("Successfully Connected!"))
+mongoose.connect(connectUri, { useNewUrlParser: true, useUnifiedTopology: true })//
+  .then(() => console.log("Successfully Connected!"))//
   .catch((err) => console.log(err.message));
+
+
+
+
+//// >>>>> 예은님 부분 시작 
+
+const bodyParser = require("body-parser"); // 요청의 본문을 파싱하기 위한 미들웨어
+const path = require("path"); // 파일 경로 조작을 위한 Node.js 모듈
 
 // body-parser 미들웨어 설정
 app.use(bodyParser.json());
@@ -47,11 +54,32 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"));
 });
 
-// codiWrite POST 요청 핸들러
-app.post("/codiWrite", (req, res) => {
-  console.log(req.body);
-  res.send("codiWrite 잘 돌아감");
+//// <<<<<<< 예은님 부분 끝
+
+
+//// >>>>>> 나영 부분 시작
+
+// 멀티파트/form-data 요청 처리를 위한 multer 설정
+const storage = multer.diskStorage({
+  destination: 'codiUploads/',
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));//업로드 시간 + path.extname(file.originalname)은 원래 파일의 확장자
+  }
 });
+const upload = multer({ storage: storage });
+
+// codiWrite POST 요청 핸들러
+app.post("/codiWrite", upload.single('image'), (req, res) => {
+  console.log("codiWrite 잘 돌아감");
+  console.log("File:", req.file); // 업로드된 파일 정보
+  console.log("Content:", req.body.content); // FormData에서 전송된 content
+  console.log("Tags:", req.body.tag); // FormData에서 전송된 tag 배열
+});
+
+//// <<<<<<< 나영 부분 끝
+
+
+
 
 // 기본 루트 경로(/)에 대한 GET 요청 핸들러
 app.get("/", (req, res) => {

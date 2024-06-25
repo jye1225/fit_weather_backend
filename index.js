@@ -74,7 +74,7 @@ const CodiLogModel = require("./models/codiLog"); // CodiLog 모델을 가져옴
 app.post("/codiWrite", upload.single("file"), async (req, res) => {
   // console.log("codiWrite 잘 돌아감", req.file, req.body);
 
-  const { memo, tag } = req.body;
+  const { memo, tag, address, maxTemp, minTemp, codiDate } = req.body;
   const { filename, path } = req.file;
   console.log("codiWrite 잘 돌아감", memo, tag, filename, path);
 
@@ -85,7 +85,10 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
       image: path,
       tag,
       memo,
-      temp: null,
+      address,
+      maxTemp,
+      minTemp,
+      codiDate,
       sky: null,
       author: null,
     });

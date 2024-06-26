@@ -5,6 +5,7 @@ const cors = require("cors"); // CORS 관련 미들웨어
 const mongoose = require("mongoose"); // MongoDB와 연결하기 위한 Mongoose ORM
 const authRoutes = require("./routes/auth"); // 인증 관련 라우트 파일
 const multer = require("multer"); // 파일 업로드를 위한 multer
+require("dotenv").config();
 
 const app = express(); // Express 애플리케이션 생성
 const port = 8080; // 서버가 리스닝할 포트 번호
@@ -102,6 +103,21 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 });
 
 //// <<<<<<< 나영 부분 끝
+
+
+// --------------커뮤니티 부분 시작--------------------------
+
+//라우트 파일 임포트
+const postsRouter = require('./routes/post')
+
+//라우트 설정
+app.use('/community', postsRouter)
+
+
+
+// --------------커뮤니티 부분 끝------------------------------
+
+
 
 // 기본 루트 경로(/)에 대한 GET 요청 핸들러
 app.get("/", (req, res) => {

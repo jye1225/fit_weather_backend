@@ -1,14 +1,15 @@
-const https = require("https"); // Node.js의 HTTPS 모듈
-const fs = require("fs"); // Node.js의 파일 시스템 모듈
-const express = require("express"); // Express 웹 프레임워크
-const cors = require("cors"); // CORS 관련 미들웨어
-const mongoose = require("mongoose"); // MongoDB와 연결하기 위한 Mongoose ORM
-const authRoutes = require("./routes/auth"); // 인증 관련 라우트 파일
-const multer = require("multer"); // 파일 업로드를 위한 multer
+const https = require("https");
+const fs = require("fs");
+const cors = require("cors");
+const path = require("path");
+const authRoutes = require("./routes/auth");
+const multer = require("multer");
 require("dotenv").config();
 
-const app = express(); // Express 애플리케이션 생성
-const port = 8080; // 서버가 리스닝할 포트 번호
+//express
+const express = require("express");
+const app = express();
+const PORT = process.env.PORT || 8080;
 
 // SSL/TLS 인증서 파일 경로 설정
 const privateKey = fs.readFileSync("certs/cert.key", "utf8");
@@ -25,63 +26,134 @@ app.use(
   })
 );
 
-// express.json() 미들웨어 설정
-app.use(express.json());
+//--- 예은 설정값 ---
 
-// MongoDB 연결 설정
-const connectUri =
-  "mongodb+srv://fitweather33:0i9znTMj22IV0a8D@cluster0.ehwrc44.mongodb.net/fitweather?retryWrites=true&w=majority&appName=Cluster0";
-mongoose.connect(connectUri) //
-  .then(() => console.log("몽고디비 연결 성공!")) //
-  .catch((err) => console.log(err.message));
+const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
+const { User } = require("./models/User.js");
+const { auth } = require("./middleware/auth.js");
 
-//// >>>>> 예은님 부분 시작 - 회원가입, 로그인
+const config = require("./config/key.js");
 
-const bodyParser = require("body-parser"); // 요청의 본문을 파싱하기 위한 미들웨어
-const path = require("path"); // 파일 경로 조작을 위한 Node.js 모듈
-
-// body-parser 미들웨어 설정
+// application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: true }));
+// application/json
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ limit: "1gb", extended: false }));
+app.use(cookieParser());
 
-// API 라우트 설정
+// mongoDB 연결
+const mongoose = require("mongoose");
+mongoose
+  .connect(config.mongoURI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("MongoDB Connected..."))
+  .catch((err) => console.log(err));
+
+// authRoutes 추가
 app.use("/api/auth", authRoutes);
 
-// 정적 파일 서빙 설정 (React 앱의 build 폴더)
-app.use(express.static(path.join(__dirname, "..", "client", "build")));
+app.get("/api/users/", (req, res) => res.send("Hello World! 안녕하세요~"));
 
-// 모든 경로에 대해 React 앱의 index.html 제공
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"));
+// 회원가입 부분
+app.post("/api/users/register", (req, res) => {
+  // 회원 가입 할 때 필요한 정보들을 client에서 가져오면 그것들을 데이터베이스에 넣어준다.
+  const user = new User(req.body); // body parser를 이용해서 json 형식으로 정보를 가져온다.
+
+  user.save((err, userInfo) => {
+    // 몽고디비에서 오는 메소드
+    if (err) return res.json({ success: false, err });
+    return res.status(200).json({
+      // status(200)은 성공했다는 뜻
+      success: true,
+    });
+  });
 });
 
-//// <<<<<<< 예은님 부분 끝
+// 로그인 부분
+app.post("/api/users/login", (req, res) => {
+  // 요청된 이메일을 데이터베이스에 있는지 찾는다.
+  User.findOne(
+    {
+      email: req.body.email,
+    },
+    (err, user) => {
+      if (!user) {
+        return res.json({
+          loginSuccess: false,
+          message: "이메일에 해당하는 유저가 없습니다.",
+        });
+      }
+      // 요청된 이메일이 데이터 베이스에 있다면 비밀번호가 맞는 비밀번호인지 확인
+      user.comparePassword(req.body.password, (err, isMatch) => {
+        if (!isMatch) {
+          return res.json({
+            loginSuccess: false,
+            message: "비밀번호가 틀렸습니다.",
+          });
+        }
+        // 비밀번호까지 맞다면 토큰 생성
+        user.generateToken((err, user) => {
+          if (err) return res.status(400).send(err);
+          // 토큰 저장 -> 쿠키, 로컬스토리지, 세션 등등
+          res
+            .cookie("x_auth", user.token)
+            .status(200)
+            .json({ loginSuccess: true, userId: user._id });
+        });
+      });
+    }
+  );
+});
 
-//// >>>>>> 나영 부분 시작
+// auth 미들웨어를 통과해야 다음으로 넘어감
+app.get("/api/users/auth", auth, (req, res) => {
+  // 여기까지 미들웨어를 통과해 왔다는 얘기는 Authentication이 true라는 말
+  res.status(200).json({
+    _id: req.user._id,
+    isAdmin: req.user.role === 0 ? false : true,
+    isAuth: true,
+    email: req.user.email,
+    name: req.user.name,
+    lastname: req.user.lastname,
+    role: req.user.role,
+    image: req.user.image,
+  });
+});
 
-// 멀티파트/form-data 요청 처리를 위한 multer 설정
+// 로그아웃 부분
+app.get("/api/users/logout", auth, (req, res) => {
+  console.log(req.user);
+  User.findOneAndUpdate({ _id: req.user._id }, { token: "" }, (err, user) => {
+    if (err) return res.json({ success: false, err });
+    return res.status(200).send({ success: true });
+  });
+});
+
+app.get("/api/hello", (req, res) => {
+  res.send("안녕하세요");
+});
+
+//--- 예은 설정값 끝 ---
+
+// multer 설정
 const storage = multer.diskStorage({
   destination: "codiUploads/",
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); //업로드 시간 + path.extname(file.originalname)은 원래 파일의 확장자
+    cb(null, Date.now() + path.extname(file.originalname));
   },
 });
 const upload = multer({ storage: storage });
 
 // codiWrite POST 요청 핸들러
-
-const CodiLogModel = require("./models/codiLog"); // CodiLog 모델을 가져옴
-
+const CodiLogModel = require("./models/codiLog");
 app.post("/codiWrite", upload.single("file"), async (req, res) => {
-  // console.log("codiWrite 잘 돌아감", req.file, req.body);
-
   const { memo, tag, address, maxTemp, minTemp, codiDate } = req.body;
   const { filename, path } = req.file;
   console.log("codiWrite 잘 돌아감", memo, tag, filename, path);
 
-  //⚡︎⚡︎ 로그인 기능 합쳐지면 token 해석이 됐을 때만 실행되도록 수정하기
   try {
-    // 새로운 포스트 문서를 생성합니다.
     const codiDoc = await CodiLogModel.create({
       image: path,
       tag,
@@ -93,31 +165,16 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
       sky: null,
       author: null,
     });
-
-    // 생성된 포스트 문서를 JSON 형태로 클라이언트에 응답으로 보냅니다.
     res.json(codiDoc);
   } catch (error) {
-    console.error(error);//백 터미널 출력
-    res.status(500).json({ error: "Internal Server Error" });//프론 콘솔 출력
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-//// <<<<<<< 나영 부분 끝
-
-
-// --------------커뮤니티 부분 시작--------------------------
-
-//라우트 파일 임포트
-const postsRouter = require('./routes/post')
-
-//라우트 설정
-app.use('/community', postsRouter)
-
-
-
-// --------------커뮤니티 부분 끝------------------------------
-
-
+// 커뮤니티 라우트 설정
+const postsRouter = require("./routes/post");
+app.use("/community", postsRouter);
 
 // 기본 루트 경로(/)에 대한 GET 요청 핸들러
 app.get("/", (req, res) => {
@@ -126,6 +183,6 @@ app.get("/", (req, res) => {
 
 // HTTPS 서버 생성 및 리스닝
 const httpsServer = https.createServer(credentials, app);
-httpsServer.listen(port, () => {
-  console.log(`${port}번 포트 돌아가는 즁~!`);
+httpsServer.listen(PORT, () => {
+  console.log(`${PORT}번 포트 돌아가는 즁~!`);
 });

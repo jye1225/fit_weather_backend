@@ -2,8 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose
 
 const PostSchema = new Schema({
-  // userId: { type: String, required: true, unique: true },
-  userId: { type: String, required: true },
+  userId: { type: String, required: true, unique: true },
   username: { type: String },
   category: String,
   title: { type: String, required: true },

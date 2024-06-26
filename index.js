@@ -112,7 +112,6 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 // --------------커뮤니티 부분 시작--------------------------
 
 const postRouter = require('./routes/post')
-
 app.use('/posts', postRouter)
 
 

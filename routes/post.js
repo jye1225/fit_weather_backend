@@ -16,12 +16,19 @@ const postImgUpload = multer.diskStorage({
 });
 const postImgUp = multer({ storage: postImgUpload })
 
-// 글 가져오기 get요청
-router.get('/getAllPosts', (req, res) => {
-  res.send('글 가져오기!')
+// ---- 글 가져오기 get요청
+router.get('/getAllPosts', async (req, res) => {
+  try {
+    const postsList = await Post.find().sort({ createdAt: -1 })
+    console.log(postsList);
+    res.json(postsList)
+
+  } catch (err) {
+    console.error(err);
+  }
 })
 
-// 글쓰기 post요청
+// ---- 글쓰기 post요청
 router.post('/writePost', postImgUp.single('file'), async (req, res) => {
   const { postCate, onReview, title, content } = req.body
   const path = req.file ? req.file.path : null;

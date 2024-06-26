@@ -57,11 +57,34 @@ app.use(express.static(path.join(__dirname, "..", "client", "build")));
 //// >>>>>> 나영 부분 시작
 
 // codiLogList GET
-// app.get('/codiLogList', (req, res) => {
-//   console.log("codiLogList 요청 옴");
-//   // res.send("codiLogList 잘 돌아감");
+app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
 
-// });
+app.get('/codiLogList', async (req, res) => {
+  console.log("codiLogList 요청 옴");
+  // res.send("codiLogList 잘 돌아감");
+
+  // 로그인 되면 userid -> 쿠키 토큰해석해서 쓰기
+  //  const { token } = req.cookies;
+  // console.log("token:::", token);
+  // if (!token) {
+  // return res.status(401).json({ message: "인증토큰없음" });
+  // }
+  try {
+    // jwt.verify(token, jwtSecret, {}, async (err, info) => {  //token 해석
+    // if (err) throw err;
+    // const codiLogList = await codiLogList.find({ userid: id}).sort({ codiDate: -1 });
+    //...
+    // });
+
+    const codiLogList = await CodiLogModel.find({ userid: 'userid' }).sort({ codiDate: 1 });
+    console.log(codiLogList);
+    res.json(codiLogList); // 생성된 codiLogList를 JSON 형태로 클라이언트에 응답으로 보냄
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+
+});
 
 
 // 멀티파트/form-data 요청 처리를 위한 multer 설정
@@ -96,7 +119,8 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
       minTemp,
       codiDate,
       sky: null,
-      author: null,
+      username: null,
+      userid: null,
     });
 
     // 생성된 포스트 문서를 JSON 형태로 클라이언트에 응답으로 보냅니다.

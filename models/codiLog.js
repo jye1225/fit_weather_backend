@@ -13,10 +13,11 @@ const CodiLogSchema = new Schema(
         sky: String,
         codiDate: String,
 
-        author: String,
+        userid: String,
+        username: String,
     },
     {
-        // timestamps: true,
+        timestamps: true,
         collection: "userCodiLog", //collection 이름 직접 설정. 안 하면 자동 설정
     }
 );

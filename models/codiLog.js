@@ -6,14 +6,17 @@ const CodiLogSchema = new Schema(
         image: String,
         memo: String,
         tag: [String],
+        address: String,
 
-        temp: Number,
+        maxTemp: Number,
+        minTemp: Number,
         sky: String,
+        codiDate: String,
 
         author: String,
     },
     {
-        timestamps: true,
+        // timestamps: true,
         collection: "userCodiLog", //collection 이름 직접 설정. 안 하면 자동 설정
     }
 );

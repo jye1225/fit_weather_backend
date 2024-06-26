@@ -11,7 +11,7 @@ const PostSchema = new Schema({
   region: { type: String, required: true },
   likeCount: { type: Number, default: 0 },
   commentsCount: { type: Number, default: 0 },
-  coordiReview: { type: Boolean, default: false },
+  coordiReview: { type: Boolean, default: 'no' },
   coordiGood: { type: Number, default: 0 },
   coordiSoso: { type: Number, default: 0 },
   coordiBad: { type: Number, default: 0 },
@@ -19,5 +19,5 @@ const PostSchema = new Schema({
   { timestamps: true }
 )
 
-const PostModel = mongoose.model('Post', PostSchema)
+const PostModel = mongoose.model('Post', PostSchema, 'posts')
 module.exports = PostModel

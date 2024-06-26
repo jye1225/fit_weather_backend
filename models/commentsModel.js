@@ -9,5 +9,5 @@ const CommentSchema = new Schema({
   { timestamps: true }
 );
 
-const CommentModel = mongoose.model('Comment', CommentSchema);
+const CommentModel = mongoose.model('Comment', CommentSchema, 'comments');
 module.exports = CommentModel

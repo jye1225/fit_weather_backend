@@ -50,10 +50,7 @@ app.use("/api/auth", authRoutes);
 // 정적 파일 서빙 설정 (React 앱의 build 폴더)
 app.use(express.static(path.join(__dirname, "..", "client", "build")));
 
-// 모든 경로에 대해 React 앱의 index.html 제공
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"));
-});
+
 
 //// <<<<<<< 예은님 부분 끝
 
@@ -107,12 +104,9 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 
 // --------------커뮤니티 부분 시작--------------------------
 
-//라우트 파일 임포트
-const postsRouter = require('./routes/post')
+const postRouter = require('./routes/post')
 
-//라우트 설정
-app.use('/community', postsRouter)
-
+app.use('/posts', postRouter)
 
 
 // --------------커뮤니티 부분 끝------------------------------
@@ -124,8 +118,16 @@ app.get("/", (req, res) => {
   res.send("app.get 잘 돌아감");
 });
 
+// 모든 경로에 대해 React 앱의 index.html 제공
+// app.get("*", (req, res) => {
+//   res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"));
+// });
+
 // HTTPS 서버 생성 및 리스닝
-const httpsServer = https.createServer(credentials, app);
-httpsServer.listen(port, () => {
+// const httpsServer = https.createServer(credentials, app);
+// httpsServer.listen(port, () => {
+//   console.log(`${port}번 포트 돌아가는 즁~!`);
+// });
+app.listen(port, () => {
   console.log(`${port}번 포트 돌아가는 즁~!`);
 });

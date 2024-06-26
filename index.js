@@ -16,10 +16,17 @@ const certificate = fs.readFileSync("certs/cert.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
 // CORS 설정
+const allowedOrigins = ['http://localhost:3000', 'https://localhost:3000']; //http와 https 모두를 허용하도록 설정
 app.use(
   cors({
     credentials: true,
-    origin: "https://localhost:3000",
+    origin: function (origin, callback) {
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true); // 허용된 출처일 경우 요청을 허용
+      } else {
+        callback(new Error('Not allowed by CORS')); // 허용되지 않은 출처일 경우 오류 반환
+      }
+    },
     methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: ["Content-Type"],
   })

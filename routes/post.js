@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const path = require('path');
 
+
 // 몽구스 모델 호출
 const Post = require('../models/postModel')
 
@@ -31,13 +32,13 @@ router.post('/writePost', postImgUp.single('file'), async (req, res) => {
   //token,cookies에서 받아와서?
   try {
     const postDoc = await Post.create({
-      userId: null,
+      userId: Math.random() * 10, //로그인 기능 생기면 바꾸기
       username: null,
       category: postCate,
       title,
       content,
       image: path,
-      region: null,
+      region: '대구광역시',
       likeCount: 0,
       commentsCount: 0,
       coordiReview: onReview,

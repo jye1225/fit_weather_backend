@@ -55,9 +55,22 @@ app.use(express.static(path.join(__dirname, "..", "client", "build")));
 //// <<<<<<< 예은님 부분 끝
 
 //// >>>>>> 나영 부분 시작
+app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
+
+
+// codiLogDetail GET
+app.get('/codiLogDetail/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const codiLog = await CodiLogModel.findById(id);
+    res.json(codiLog);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+})
 
 // codiLogList GET
-app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
 
 app.get('/codiLogList', async (req, res) => {
   console.log("codiLogList 요청 옴");
@@ -77,7 +90,7 @@ app.get('/codiLogList', async (req, res) => {
     // });
 
     const codiLogList = await CodiLogModel.find({ userid: 'userid' }).sort({ codiDate: 1 });
-    console.log(codiLogList);
+    // console.log(codiLogList);
     res.json(codiLogList); // 생성된 codiLogList를 JSON 형태로 클라이언트에 응답으로 보냄
   } catch (error) {
     console.error(error);
@@ -142,7 +155,9 @@ const postsRouter = require('./routes/post')
 //라우트 설정
 app.use('/community', postsRouter)
 
-
+app.get('/postWrite', (req, res) => {
+  res.send('Hello World!')
+})
 
 // --------------커뮤니티 부분 끝------------------------------
 
@@ -158,8 +173,13 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"));
 });
 
-// HTTPS 서버 생성 및 리스닝
+// HTTPS 서버 생성 및 리스닝 - 나영
 const httpsServer = https.createServer(credentials, app);
 httpsServer.listen(port, () => {
   console.log(`${port}번 포트 돌아가는 즁~!`);
 });
+
+// HTTP 서버 - 명은, 지선
+// app.listen(port, () => {
+//   console.log(`${port}번 포트 돌아가는 즁~!`);
+// });

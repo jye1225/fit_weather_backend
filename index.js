@@ -50,13 +50,10 @@ app.use("/api/auth", authRoutes);
 // 정적 파일 서빙 설정 (React 앱의 build 폴더)
 app.use(express.static(path.join(__dirname, "..", "client", "build")));
 
-
-
 //// <<<<<<< 예은님 부분 끝
 
 //// >>>>>> 나영 부분 시작
 app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
-
 
 // codiLogDetail GET
 app.get('/codiLogDetail/:id', async (req, res) => {

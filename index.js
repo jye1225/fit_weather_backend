@@ -21,13 +21,7 @@ const allowedOrigins = ["http://localhost:3000", "https://localhost:3000"]; //ht
 app.use(
   cors({
     credentials: true,
-    origin: function (origin, callback) {
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true); // 허용된 출처일 경우 요청을 허용
-      } else {
-        callback(new Error("Not allowed by CORS")); // 허용되지 않은 출처일 경우 오류 반환
-      }
-    },
+    origin: true, // 모든 출처 허용
     methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: ["Content-Type"],
   })
@@ -50,8 +44,9 @@ app.use(cookieParser());
 
 // mongoDB 연결
 const mongoose = require("mongoose");
+const mongoURI = process.env.MONGODB_URI;
 mongoose
-  .connect(config.mongoURI, {
+  .connect(mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -316,12 +311,12 @@ app.get("*", (req, res) => {
 });
 
 // HTTPS 서버 생성 및 리스닝 - 나영
-const httpsServer = https.createServer(credentials, app);
-httpsServer.listen(PORT, () => {
-  console.log(`${PORT}번 포트 돌아가는 즁~!`);
-});
+// const httpsServer = https.createServer(credentials, app);
+// httpsServer.listen(PORT, () => {
+//   console.log(`${PORT}번 포트 돌아가는 즁~!`);
+// });
 
 // HTTP 서버 - 명은, 지선
-// app.listen(port, () => {
-//   console.log(`${port}번 포트 돌아가는 즁~!`);
-// });
+app.listen(PORT, () => {
+  console.log(`${PORT}번 포트 돌아가는 즁~!`);
+});

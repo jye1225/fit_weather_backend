@@ -16,10 +16,17 @@ const certificate = fs.readFileSync("certs/cert.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
 // CORS 설정
+const allowedOrigins = ['http://localhost:3000', 'https://localhost:3000']; //http와 https 모두를 허용하도록 설정
 app.use(
   cors({
     credentials: true,
-    origin: "https://localhost:3000",
+    origin: function (origin, callback) {
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true); // 허용된 출처일 경우 요청을 허용
+      } else {
+        callback(new Error('Not allowed by CORS')); // 허용되지 않은 출처일 경우 오류 반환
+      }
+    },
     methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: ["Content-Type"],
   })
@@ -146,15 +153,8 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 
 // --------------커뮤니티 부분 시작--------------------------
 
-//라우트 파일 임포트
-const postsRouter = require('./routes/post')
-
-//라우트 설정
-app.use('/community', postsRouter)
-
-app.get('/postWrite', (req, res) => {
-  res.send('Hello World!')
-})
+const postRouter = require('./routes/post')
+app.use('/posts', postRouter)
 
 // --------------커뮤니티 부분 끝------------------------------
 

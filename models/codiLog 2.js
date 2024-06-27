@@ -6,15 +6,11 @@ const CodiLogSchema = new Schema(
         image: String,
         memo: String,
         tag: [String],
-        address: String,
 
-        maxTemp: Number,
-        minTemp: Number,
+        temp: Number,
         sky: String,
-        codiDate: String,
 
-        userid: String,
-        username: String,
+        author: String,
     },
     {
         timestamps: true,

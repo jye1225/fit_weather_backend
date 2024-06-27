@@ -57,11 +57,52 @@ app.use("/api/auth", authRoutes);
 // 정적 파일 서빙 설정 (React 앱의 build 폴더)
 app.use(express.static(path.join(__dirname, "..", "client", "build")));
 
-
-
 //// <<<<<<< 예은님 부분 끝
 
 //// >>>>>> 나영 부분 시작
+app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
+
+// codiLogDetail GET
+app.get('/codiLogDetail/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const codiLog = await CodiLogModel.findById(id);
+    res.json(codiLog);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+})
+
+// codiLogList GET
+
+app.get('/codiLogList', async (req, res) => {
+  console.log("codiLogList 요청 옴");
+  // res.send("codiLogList 잘 돌아감");
+
+  // 로그인 되면 userid -> 쿠키 토큰해석해서 쓰기
+  //  const { token } = req.cookies;
+  // console.log("token:::", token);
+  // if (!token) {
+  // return res.status(401).json({ message: "인증토큰없음" });
+  // }
+  try {
+    // jwt.verify(token, jwtSecret, {}, async (err, info) => {  //token 해석
+    // if (err) throw err;
+    // const codiLogList = await codiLogList.find({ userid: id}).sort({ codiDate: -1 });
+    //...
+    // });
+
+    const codiLogList = await CodiLogModel.find({ userid: 'userid' }).sort({ codiDate: 1 });
+    // console.log(codiLogList);
+    res.json(codiLogList); // 생성된 codiLogList를 JSON 형태로 클라이언트에 응답으로 보냄
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+
+});
+
 
 // 멀티파트/form-data 요청 처리를 위한 multer 설정
 const storage = multer.diskStorage({
@@ -95,7 +136,8 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
       minTemp,
       codiDate,
       sky: null,
-      author: null,
+      username: null,
+      userid: null,
     });
 
     // 생성된 포스트 문서를 JSON 형태로 클라이언트에 응답으로 보냅니다.
@@ -114,7 +156,6 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 const postRouter = require('./routes/post')
 app.use('/posts', postRouter)
 
-
 // --------------커뮤니티 부분 끝------------------------------
 
 
@@ -124,16 +165,18 @@ app.get("/", (req, res) => {
   res.send("app.get 잘 돌아감");
 });
 
-// 모든 경로에 대해 React 앱의 index.html 제공
-// app.get("*", (req, res) => {
-//   res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"));
-// });
+// 모든 경로에 대해 React 앱의 index.html 제공 --> 이게 다른 get요청보다 후순위어야 오류가 안 나서 아래로 옮겼습니다! -나영
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"));
+});
 
-// HTTPS 서버 생성 및 리스닝
-// const httpsServer = https.createServer(credentials, app);
-// httpsServer.listen(port, () => {
-//   console.log(`${port}번 포트 돌아가는 즁~!`);
-// });
-app.listen(port, () => {
+// HTTPS 서버 생성 및 리스닝 - 나영
+const httpsServer = https.createServer(credentials, app);
+httpsServer.listen(port, () => {
   console.log(`${port}번 포트 돌아가는 즁~!`);
 });
+
+// HTTP 서버 - 명은, 지선
+// app.listen(port, () => {
+//   console.log(`${port}번 포트 돌아가는 즁~!`);
+// });

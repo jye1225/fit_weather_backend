@@ -17,7 +17,7 @@ const certificate = fs.readFileSync("certs/cert.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
 // CORS 설정
-const allowedOrigins = ['http://localhost:3000', 'https://localhost:3000']; //http와 https 모두를 허용하도록 설정
+const allowedOrigins = ["http://localhost:3000", "https://localhost:3000"]; //http와 https 모두를 허용하도록 설정
 app.use(
   cors({
     credentials: true,
@@ -25,7 +25,7 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         callback(null, true); // 허용된 출처일 경우 요청을 허용
       } else {
-        callback(new Error('Not allowed by CORS')); // 허용되지 않은 출처일 경우 오류 반환
+        callback(new Error("Not allowed by CORS")); // 허용되지 않은 출처일 경우 오류 반환
       }
     },
     methods: ["GET", "POST", "DELETE", "PUT"],
@@ -145,10 +145,10 @@ app.get("/api/hello", (req, res) => {
 //--- 예은 설정값 끝 ---
 
 //// >>>>>> 나영 부분 시작
-app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
+app.use("/codiUploads", express.static(path.join(__dirname, "codiUploads"))); //Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
 
 // codiLogDetail GET
-app.get('/codiLogDetail/:id', async (req, res) => {
+app.get("/codiLogDetail/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const codiLog = await CodiLogModel.findById(id);
@@ -157,11 +157,11 @@ app.get('/codiLogDetail/:id', async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
 // codiLogList GET
 
-app.get('/codiLogList', async (req, res) => {
+app.get("/codiLogList", async (req, res) => {
   console.log("codiLogList 요청 옴");
   // res.send("codiLogList 잘 돌아감");
 
@@ -178,14 +178,15 @@ app.get('/codiLogList', async (req, res) => {
     //...
     // });
 
-    const codiLogList = await CodiLogModel.find({ userid: 'userid' }).sort({ codiDate: 1 });
+    const codiLogList = await CodiLogModel.find({ userid: "userid" }).sort({
+      codiDate: 1,
+    });
     // console.log(codiLogList);
     res.json(codiLogList); // 생성된 codiLogList를 JSON 형태로 클라이언트에 응답으로 보냄
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-
 });
 
 // multer 설정
@@ -226,14 +227,83 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 
 //// <<<<<<< 나영 부분 끝
 
-
 // --------------커뮤니티 부분 시작--------------------------
 
-const postRouter = require('./routes/post')
-app.use('/posts', postRouter)
+const postRouter = require("./routes/post");
+app.use("/posts", postRouter);
 
 // --------------커뮤니티 부분 끝------------------------------
 
+//// >>>>> 지선 부분 시작 - GPT 프롬프트
+
+// const { OpenAI } = require("openai"); // openai 모듈
+
+// app.post("/talkBox", async (req, res) => {
+//   console.log(req.body);
+//   const { temperature, maxTemp, minTemp, rain, dust, uv } = req.body;
+
+//   // 날씨를 전달해주는 prompt
+//   let prompt = "";
+//   prompt += `오늘의 날씨를 제시해줄게. 현재기온 : ${temperature}°C, 최고기온/최저기온 : ${maxTemp}°C / ${minTemp}°C, 자외선 : ${uv}, 미세먼지 : ${dust}, 강수확률: ${rain}%`;
+//   prompt += `날씨는 3~4줄로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘.`;
+//   prompt += `주의할 점은 숫자로 된 수치정보는 언급하지 말고 아래의 기준에 맞춰서 답변해줘.
+//   1. 최저기온이 25°C 이상이면 겉옷 얘기 금지
+//   2. 미세먼지 값이 좋음 또는 보통이면 마스크 얘기 금지, 미세먼지 얘기 금지
+//   3. 강수확률이 40% 이하이면 비 안 온다 얘기 금지, 우산 얘기 금지
+//   4. 강수확률이 40% 이상 60% 미만이면 “비가 올 수도 있으니 우산 챙겨가!” 답변 추가
+//   5. 강수확률이 60% 이상이면 “오늘 비오니까 우산 챙겨가!” 답변 추가
+//   6. 자외선 값이 매우높음 또는 높음이면 썬크림 얘기 해주고, 보통 또는 낮음이면 자외선, 썬크림 얘기 금지`;
+//   prompt += `답변의 한 문장이 끝날 때 다음 답변을 이어서 쓰지 말고 줄을 바꿔줘`;
+
+//   // prompt를 전달하고 결과를 받아옴
+//   const result = await callChatGPT(prompt);
+//   if (result) {
+//     res.json({ response: result });
+//   } else {
+//     res.status(500).json({ error: "실패" });
+//   }
+// });
+
+// async function callChatGPT(prompt) {
+//   try {
+//     const result = await openai.chat.completions.create({
+//       model: "gpt-4o", // gpt 모델 버전
+//       messages: [
+//         // 1. GPT 역할 부여 샘플
+//         {
+//           role: "system",
+//           content:
+//             "당신은 날씨에 따라 어떻게 옷을 입어야 할지 고민이 많은 친구나 동생에게 날씨를 알려줘야 한다.",
+//         },
+//         {
+//           role: "user",
+//           content:
+//             "당신은 날씨에 따라 어떻게 옷을 입어야 할지 고민이 많은 친구나 동생에게 날씨를 알려줘야 한다.",
+//         },
+//         {
+//           role: "assistant",
+//           content:
+//             "저는 주변인을 잘 챙기고 꼼꼼한 성격입니다. 날씨에 맞게 옷을 잘 입고 패션에 대해 잘 압니다.",
+//         },
+
+//         // 2. 내가 전달한 prompt
+//         { role: "user", content: prompt },
+//       ],
+//       max_tokens: 1000, // 돈 많이 나갈까봐 글자수 제한;
+//       temperature: 0.8, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 안전한 선택을, 1.0에 가까울수록 더 창의적인 선택을 함.
+//       top_p: 1, // 0.0 ~ 1.0 사이의 값. 1.0에 가까울수록 다양한 선택을 함.
+//       frequency_penalty: 0.0, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 반복적인 선택을 함.
+//       presence_penalty: 0.0, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 새로운 선택을 함.
+//     });
+
+//     console.log("result: ", result.choices[0].message);
+//     return result.choices[0].message;
+//   } catch (e) {
+//     console.log(e);
+//   }
+// }
+
+//// <<<<<<< 지선 부분 끝
 
 // 기본 루트 경로(/)에 대한 GET 요청 핸들러
 app.get("/", (req, res) => {

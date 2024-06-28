@@ -47,10 +47,7 @@ const mongoose = require("mongoose");
 const mongoURI = process.env.MONGODB_URI;
 
 mongoose
-  .connect(mongoURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(mongoURI)//useNewUrlParser와 useUnifiedTopology 옵션이 제거될 예정이래서 삭제했습니다.
   .then(() => console.log("MongoDB Connected..."))
   .catch((err) => console.log(err));
 
@@ -143,9 +140,6 @@ app.get("/api/hello", (req, res) => {
 //// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
 app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
 
-
-
-
 // codiLogDetail GET
 app.get('/codiLogDetail/:id', async (req, res) => {
   const { id } = req.params;
@@ -158,39 +152,42 @@ app.get('/codiLogDetail/:id', async (req, res) => {
   }
 })
 
-
 // codiLogToday Get
 app.get('/codiLogToday/:today', async (req, res) => {
-  console.log('요청 성공 >> codiLogToday Get ');
+  // console.log('요청 성공 >> codiLogToday Get ');
   const { today } = req.params;
   try {
     const codiLogToday = await CodiLogModel.find({ userid: 'userid', codiDate: today });
-    console.log(codiLogToday[0]);
-    res.json(codiLogToday[0]);
+    if (codiLogToday.length > 0) {
+      console.log(codiLogToday[0]);
+      res.json(codiLogToday[0]);
+    } else {
+      console.log('해당날짜 기록 없음');
+      res.json([]);  // 해당 날짜에 대한 데이터가 없을 때 빈 배열을 반환
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
+});
+
+// codiLogSimilar Get
+app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky', (req, res) => {
+  const { maxTemp, minTemp, sky } = req.params;
+  console.log('-------------요청 성공 >> ', maxTemp, minTemp, sky); // 예 ) 31 21 구름많음
+  // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
+  //1순위 : 기온차 조건 ok + sky 똑같음
+  //2순위 : 기온차 조건 ok 
+  //부합하는 기록이 여러개라면 : 랜덤?
 })
 
 // codiLogList GET
-
 app.get('/codiLogList', async (req, res) => {
   console.log("codiLogList 요청 옴");
   // res.send("codiLogList 잘 돌아감");
 
-  // 로그인 되면 userid -> 쿠키 토큰해석해서 쓰기
-  //  const { token } = req.cookies;
-  // console.log("token:::", token);
-  // if (!token) {
-  // return res.status(401).json({ message: "인증토큰없음" });
-  // }
+  // 로그인 되면 userid -> 로그인한 사람 id로 바꾸기
   try {
-    // jwt.verify(token, jwtSecret, {}, async (err, info) => {  //token 해석
-    // if (err) throw err;
-    // const codiLogList = await codiLogList.find({ userid: id}).sort({ codiDate: -1 });
-    //...
-    // });
 
     const codiLogList = await CodiLogModel.find({ userid: 'userid' }).sort({ codiDate: 1 });
     // console.log(codiLogList);
@@ -214,7 +211,7 @@ const upload = multer({ storage: storage });
 // codiWrite POST 요청 핸들러
 const CodiLogModel = require("./models/codiLog");
 app.post("/codiWrite", upload.single("file"), async (req, res) => {
-  const { memo, tag, address, maxTemp, minTemp, codiDate } = req.body;
+  const { memo, tag, address, maxTemp, minTemp, codiDate, sky } = req.body;
   const { filename, path } = req.file;
   console.log("codiWrite 잘 돌아감", memo, tag, filename, path);
 
@@ -226,10 +223,10 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
       address,
       maxTemp,
       minTemp,
+      sky,
       codiDate,
-      sky: null,
-      username: null,
-      userid: null,
+      username: 'username',
+      userid: 'userid',
     });
     res.json(codiDoc);
   } catch (error) {

@@ -9,7 +9,7 @@ require("dotenv").config();
 //express
 const express = require("express");
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = 8080;
 
 // SSL/TLS 인증서 파일 경로 설정
 const privateKey = fs.readFileSync("certs/cert.key", "utf8");
@@ -17,21 +17,15 @@ const certificate = fs.readFileSync("certs/cert.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
 // CORS 설정
-const allowedOrigins = ['http://localhost:3000', 'https://localhost:3000']; //http와 https 모두를 허용하도록 설정
 app.use(
   cors({
     credentials: true,
-    origin: function (origin, callback) {
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true); // 허용된 출처일 경우 요청을 허용
-      } else {
-        callback(new Error('Not allowed by CORS')); // 허용되지 않은 출처일 경우 오류 반환
-      }
-    },
+    origin: true, // 모든 출처 허용
     methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: ["Content-Type"],
   })
-);
+)
+
 
 //--- 예은 설정값 ---
 
@@ -40,7 +34,7 @@ const cookieParser = require("cookie-parser");
 const { User } = require("./models/User.js");
 const { auth } = require("./middleware/auth.js");
 
-const config = require("./config/key.js");
+// const config = require("./config/key.js");
 
 // application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -50,8 +44,10 @@ app.use(cookieParser());
 
 // mongoDB 연결
 const mongoose = require("mongoose");
+const mongoURI = process.env.MONGODB_URI;
+
 mongoose
-  .connect(config.mongoURI, {
+  .connect(mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -144,8 +140,11 @@ app.get("/api/hello", (req, res) => {
 
 //--- 예은 설정값 끝 ---
 
-//// >>>>>> 나영 부분 시작
+//// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
 app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
+
+
+
 
 // codiLogDetail GET
 app.get('/codiLogDetail/:id', async (req, res) => {
@@ -153,6 +152,21 @@ app.get('/codiLogDetail/:id', async (req, res) => {
   try {
     const codiLog = await CodiLogModel.findById(id);
     res.json(codiLog);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+})
+
+
+// codiLogToday Get
+app.get('/codiLogToday/:today', async (req, res) => {
+  console.log('요청 성공 >> codiLogToday Get ');
+  const { today } = req.params;
+  try {
+    const codiLogToday = await CodiLogModel.find({ userid: 'userid', codiDate: today });
+    console.log(codiLogToday[0]);
+    res.json(codiLogToday[0]);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -224,7 +238,7 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
   }
 });
 
-//// <<<<<<< 나영 부분 끝
+//// ~~~~~~~~~~~~~~ 나영 부분 끝~~~~~~~~~~~~~~
 
 
 // --------------커뮤니티 부분 시작--------------------------
@@ -251,7 +265,7 @@ httpsServer.listen(PORT, () => {
   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 });
 
-// HTTP 서버 - 명은, 지선
-// app.listen(port, () => {
-//   console.log(`${port}번 포트 돌아가는 즁~!`);
+// HTTP 서버 - 명은, 지선, 예은
+// app.listen(PORT, () => {
+//   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 // });

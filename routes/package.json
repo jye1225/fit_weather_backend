@@ -1,5 +1,5 @@
 {
-  "name": "yeeun",
+  "name": "server",
   "version": "1.0.0",
   "scripts": {
     "start": "npm run start-server",

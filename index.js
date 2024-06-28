@@ -17,7 +17,6 @@ const certificate = fs.readFileSync("certs/cert.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
 // CORS 설정
-const allowedOrigins = ["http://localhost:3000", "https://localhost:3000"]; //http와 https 모두를 허용하도록 설정
 app.use(
   cors({
     credentials: true,
@@ -59,7 +58,7 @@ app.use("/api/auth", authRoutes);
 app.get("/api/users/", (req, res) => res.send("Hello World! 안녕하세요~"));
 
 // 회원가입 부분
-app.post("/api/users/register", (req, res) => {
+app.post("/api/users/signup", (req, res) => {
   // 회원 가입 할 때 필요한 정보들을 client에서 가져오면 그것들을 데이터베이스에 넣어준다.
   const user = new User(req.body); // body parser를 이용해서 json 형식으로 정보를 가져온다.
 
@@ -224,8 +223,10 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 
 // --------------커뮤니티 부분 시작--------------------------
 
-const postRouter = require("./routes/post");
+const postRouter = require("./routes/post.js");
+const commentRouter = require('./routes/comment.js')
 app.use("/posts", postRouter);
+app.use("/comments", commentRouter);
 
 // --------------커뮤니티 부분 끝------------------------------
 
@@ -306,9 +307,9 @@ app.get("/", (req, res) => {
 });
 
 // 모든 경로에 대해 React 앱의 index.html 제공 --> 이게 다른 get요청보다 후순위어야 오류가 안 나서 아래로 옮겼습니다! -나영
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"));
-});
+// app.get("*", (req, res) => {
+//   res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"));
+// });
 
 // HTTPS 서버 생성 및 리스닝 - 나영
 // const httpsServer = https.createServer(credentials, app);

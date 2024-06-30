@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const multer = require("multer");
 const path = require('path');
+const jwt = require("jsonwebtoken");
+
+// 웹토큰 시크릿 키
+const jwtSecret = process.env.JWT_SECRET
 
 // 포스트 이미지 저장 경로 multer 설정
 const postImgUpload = multer.diskStorage({
@@ -15,7 +19,6 @@ const postImgUp = multer({ storage: postImgUpload })
 // 몽구스 모델 호출
 const Post = require('../models/postModel')
 const Like = require('../models/likeModel');
-const { log } = require('console');
 
 // ---- 커뮤니티 디테일 페이지 정보 get요청
 router.get('/postDetail/:postId', async (req, res) => {
@@ -33,9 +36,10 @@ router.get('/postDetail/:postId', async (req, res) => {
 // ---- 글 가져오기 get요청
 router.get('/getAllPosts', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = page === 1 ? 15 : 5;  // 첫 페이지는 5개, 나머지는 5개
-    const skip = page === 1 ? 0 : 5 + (page - 2) * 5;  // 첫 페이지 이후 스킵 계산
+    //무한스크롤용인데...
+    // const page = parseInt(req.query.page) || 1;
+    // const limit = page === 1 ? 15 : 5;  // 첫 페이지는 5개, 나머지는 5개
+    // const skip = page === 1 ? 0 : 5 + (page - 2) * 5;  // 첫 페이지 이후 스킵 계산
 
     const postsList = await Post.find().sort({ createdAt: -1 })
     // .skip(skip).limit(limit)
@@ -52,6 +56,7 @@ router.get('/getAllPosts', async (req, res) => {
   }
 })
 
+
 // ---- 글쓰기 post요청
 router.post('/writePost', postImgUp.single('file'), async (req, res) => {
   const { postCate, onReview, title, content, region } = req.body
@@ -60,45 +65,33 @@ router.post('/writePost', postImgUp.single('file'), async (req, res) => {
   console.log('이미지 경로', path);
 
   //회원가입 로그인 기능 구현외면 userId, username 하기
-  //token,cookies에서 받아와서?
-  try {
-    const postDoc = await Post.create({
-      userId: Math.random() * 10, //로그인 기능 생기면 바꾸기
-      username: null,
-      category: postCate,
-      title,
-      content,
-      image: path,
-      region,
-      likeCount: 0,
-      commentsCount: 0,
-      coordiReview: onReview,
-      coordiGood: 0,
-      coordiSoso: 0,
-      coordiBad: 0,
-    })
-    res.json(postDoc)
+  const { token } = req.cookies;
+  jwt.verify(token, jwtSecret, {}, async (err, userInfo) => {
+    if (err) throw err;
+    console.log('유저정보', userInfo.userid, '/', userInfo.username);
+    try {
+      const postDoc = await Post.create({
+        userId: userInfo.userid,
+        username: userInfo.username,
+        category: postCate,
+        title,
+        content,
+        image: path,
+        region,
+        likeCount: 0,
+        commentsCount: 0,
+        coordiReview: onReview,
+        coordiGood: 0,
+        coordiSoso: 0,
+        coordiBad: 0,
+      })
+      res.json(postDoc)
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ err: '글쓰기 서버 에러' });
+    }
+  })
 
-    //로그인 된 회원정보 cookies 에서 가져오기
-    // const { token } = req.cookies
-    // jwt.verify(token, jwtSecret, {}, async (err, info) => {
-    //   if (err) throw err;
-    //   console.log(info.username);
-    //   const { title, summary, content } = req.body
-    //   const postDoc = await Post.create({
-    //     title,
-    //     summary,
-    //     content,
-    //     cover: newPath,
-    //     author: info.username,
-    //   })
-    //   res.json(postDoc)
-    // })
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ err: '글쓰기 서버 에러' });
-  }
 })
 
 // ---- 좋아요 클릭 
@@ -152,7 +145,7 @@ router.delete('/delPost/:postId', async (req, res) => {
 })
 
 // ---- 글 수정
-// 수정페이지를 데이터 요청
+// 수정페이지용 데이터 요청
 router.get('/postEdit/:postId', async (req, res) => {
   try {
     const { postId } = req.params
@@ -181,9 +174,6 @@ router.put('/postUpdate/:postId', postImgUp.single('file'), async (req, res) => 
     console.log('변경된 경로', path);
   }
 
-
-  //회원가입 로그인 기능 구현외면 userId, username 하기
-  //token,cookies에서 받아와서?
   try {
     const postDoc = await Post.findByIdAndUpdate(postId, {
       category: postCate,
@@ -197,32 +187,6 @@ router.put('/postUpdate/:postId', postImgUp.single('file'), async (req, res) => 
   } catch (err) {
     console.error('글수정 업데이트 서버 에러', err);
   }
-
-  // let newPath = null
-  // if (req.file) {
-  //   const { path, originalname } = req.file;
-  //   const part = originalname.split('.')
-  //   const ext = part[part.length - 1]
-  //   newPath = path + '.' + ext
-  //   fs.renameSync(path, newPath)
-  // }
-
-  // const { token } = req.cookies;
-  // if (!token) {
-  //   return res.status(401).json({ message: '토큰정보 없음' })
-  // }
-  // jwt.verify(token, jwtSecret, {}, async (err, info) => {
-  //   if (err) throw err;
-  //   const { title, summary, content } = req.body
-  //   const postDoc = await Post.findById(postId)
-  //   await Post.findByIdAndUpdate(postId, {
-  //     title,
-  //     summary,
-  //     content,
-  //     cover: newPath ? newPath : postDoc.cover,
-  //   })
-  //   res.json({ message: 'ok' })
-  // })
 })
 
 

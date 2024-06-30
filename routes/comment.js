@@ -1,5 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require("jsonwebtoken");
+
+// 웹토큰 시크릿 키
+const jwtSecret = process.env.JWT_SECRET
 
 // 몽구스 모델 호출
 const Comment = require('../models/commentsModel')
@@ -8,35 +12,28 @@ const Post = require('../models/postModel')
 // ---- 댓글 입력
 router.post('/cmntAdd', async (req, res) => {
   const { content, postId } = req.body
-  console.log(content, postId);
-  try {
-    const cmntDoc = await Comment.create({
-      postId,
-      userId: Math.random() * 10, //로그인 기능 생기면 바꾸기
-      content
-    })
-    const countCmnt = await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
-    res.json({ cmntDoc, countCmnt, msg: 'ok' })
+  console.log('댓글입력', content, postId);
 
-  } catch (error) {
-    console.error('댓글 입력 서버 에러', error);
-    res.status(500).json('댓글 작성 서버 에러', error);
-  }
+  const { token } = req.cookies
+  jwt.verify(token, jwtSecret, {}, async (err, userInfo) => {
+    if (err) throw err;
+    console.log(userInfo);
+
+    try {
+      const cmntDoc = await Comment.create({
+        postId,
+        userId: userInfo.userid, //로그인 기능 생기면 바꾸기
+        content
+      })
+      const countCmnt = await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
+      res.json({ cmntDoc, countCmnt, msg: 'ok' })
+
+    } catch (error) {
+      console.error('댓글 입력 서버 에러', error);
+      res.status(500).json('댓글 작성 서버 에러', error);
+    }
+  })
 })
-
-// const { token } = req.cookies;
-// jwt.verify(token, jwtSecret, {}, async (err, info) => {
-//   if (err) throw err
-//   const commentDoc = await Comment.create({
-//     content,
-//     author: info.username,
-//     postId,
-//   })
-// console.log(commentDoc);
-// res.json(commentDoc)
-// })
-// })
-
 
 // ---- 댓글 데이터 받아서 전송
 router.get('/cmntList/:postId', async (req, res) => {
@@ -53,13 +50,13 @@ router.get('/cmntList/:postId', async (req, res) => {
 })
 
 // ---- 댓글 삭제
-router.delete('/cmntDel/:cmntId', async (req, res) => {
-  const { cmntId } = req.params
-  console.log(cmntId);
+router.delete('/cmntDel/:postId/:cmntId', async (req, res) => {
+  const { cmntId, postId } = req.params
+  console.log(cmntId, '/', postId);
   try {
-    await Comment.findByIdAndDelete(cmntId);
-    await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
-    res.json({ msg: 'ok' })
+    const cmntDel = await Comment.findByIdAndDelete(cmntId);
+    const minusCmntCount = await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: -1 } });
+    res.json({ cmntDel, minusCmntCount, msg: 'ok' })
 
   } catch (error) {
     console.error('댓글 삭제 에러', error);

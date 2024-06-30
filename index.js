@@ -17,7 +17,6 @@ const certificate = fs.readFileSync("certs/cert.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
 // CORS 설정
-
 app.use(
   cors({
     credentials: true,
@@ -33,9 +32,14 @@ app.use(express.json());
 
 // mongoDB 연결
 const mongoose = require("mongoose");
-const connectUri =
-  "mongodb+srv://fitweather33:0i9znTMj22IV0a8D@cluster0.ehwrc44.mongodb.net/fitweather?retryWrites=true&w=majority&appName=Cluster0";
-mongoose.connect(connectUri);
+const mongoURI = process.env.MONGODB_URI;
+mongoose
+  .connect(mongoURI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("MongoDB Connected..."))
+  .catch((err) => console.log(err));
 
 const User = require("./models/User"); // User 모델 생성
 
@@ -75,17 +79,19 @@ app.post("/login", async (req, res) => {
     res.json({ message: "nouser" });
     return;
   }
+  console.log(userDoc);
 
   // jwt.sign( { token에 들어갈 데이터 }, 비밀키, { token의 유효기간(안써도됨) }, ( err, token )=>{} )
   const passOK = bcrypt.compareSync(password, userDoc.password); // 두 정보가 맞으면 true, 틀리면 false
   if (passOK) {
-    jwt.sign({ userid, id: userDoc._id }, jwtSecret, {}, (err, token) => {
+    jwt.sign({ userid, id: userDoc._id, username: userDoc.username }, jwtSecret, {}, (err, token) => {
       if (err) throw err;
       console.log(token);
-      res.json({
+      res.cookie('token', token).json({
         token,
         id: userDoc._id,
         userid,
+        username: userDoc.username
       });
     });
   } else {
@@ -100,11 +106,11 @@ app.post("/logout", (req, res) => {
 
 // -------- 예은 설정값 끝 ---------
 
-//// >>>>>> 나영 부분 시작
-app.use("/codiUploads", express.static(path.join(__dirname, "codiUploads"))); //Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
+//// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
+app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
 
 // codiLogDetail GET
-app.get("/codiLogDetail/:id", async (req, res) => {
+app.get('/codiLogDetail/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const codiLog = await CodiLogModel.findById(id);
@@ -113,36 +119,53 @@ app.get("/codiLogDetail/:id", async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
+})
+
+// codiLogToday Get
+app.get('/codiLogToday/:today', async (req, res) => {
+  // console.log('요청 성공 >> codiLogToday Get ');
+  const { today } = req.params;
+  try {
+    const codiLogToday = await CodiLogModel.find({ userid: 'userid', codiDate: today });
+    if (codiLogToday.length > 0) {
+      console.log(codiLogToday[0]);
+      res.json(codiLogToday[0]);
+    } else {
+      console.log('해당날짜 기록 없음');
+      res.json([]);  // 해당 날짜에 대한 데이터가 없을 때 빈 배열을 반환
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
-// codiLogList GET
+// codiLogSimilar Get
+app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky', (req, res) => {
+  const { maxTemp, minTemp, sky } = req.params;
+  console.log('-------------요청 성공 >> ', maxTemp, minTemp, sky); // 예 ) 31 21 구름많음
+  // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
+  //1순위 : 기온차 조건 ok + sky 똑같음
+  //2순위 : 기온차 조건 ok 
+  //부합하는 기록이 여러개라면 : 랜덤?
+})
 
-app.get("/codiLogList", async (req, res) => {
+// codiLogList GET
+app.get('/codiLogList', async (req, res) => {
   console.log("codiLogList 요청 옴");
   // res.send("codiLogList 잘 돌아감");
 
-  // 로그인 되면 userid -> 쿠키 토큰해석해서 쓰기
-  //  const { token } = req.cookies;
-  // console.log("token:::", token);
-  // if (!token) {
-  // return res.status(401).json({ message: "인증토큰없음" });
-  // }
+  // 로그인 되면 userid -> 로그인한 사람 id로 바꾸기
   try {
-    // jwt.verify(token, jwtSecret, {}, async (err, info) => {  //token 해석
-    // if (err) throw err;
-    // const codiLogList = await codiLogList.find({ userid: id}).sort({ codiDate: -1 });
-    //...
-    // });
 
-    const codiLogList = await CodiLogModel.find({ userid: "userid" }).sort({
-      codiDate: 1,
-    });
+    const codiLogList = await CodiLogModel.find({ userid: 'userid' }).sort({ codiDate: 1 });
     // console.log(codiLogList);
     res.json(codiLogList); // 생성된 codiLogList를 JSON 형태로 클라이언트에 응답으로 보냄
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
+
 });
 
 // multer 설정
@@ -157,7 +180,7 @@ const upload = multer({ storage: storage });
 // codiWrite POST 요청 핸들러
 const CodiLogModel = require("./models/codiLog");
 app.post("/codiWrite", upload.single("file"), async (req, res) => {
-  const { memo, tag, address, maxTemp, minTemp, codiDate } = req.body;
+  const { memo, tag, address, maxTemp, minTemp, codiDate, sky } = req.body;
   const { filename, path } = req.file;
   console.log("codiWrite 잘 돌아감", memo, tag, filename, path);
 
@@ -169,10 +192,10 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
       address,
       maxTemp,
       minTemp,
+      sky,
       codiDate,
-      sky: null,
-      username: null,
-      userid: null,
+      username: 'username',
+      userid: 'userid',
     });
     res.json(codiDoc);
   } catch (error) {
@@ -181,7 +204,7 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
   }
 });
 
-//// <<<<<<< 나영 부분 끝
+//// ~~~~~~~~~~~~~~ 나영 부분 끝~~~~~~~~~~~~~~
 
 // --------------커뮤니티 부분 시작--------------------------
 

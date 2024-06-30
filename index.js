@@ -185,7 +185,6 @@ app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky', (req, res) => {
 app.get('/codiLogList', async (req, res) => {
   console.log("codiLogList 요청 옴");
   // res.send("codiLogList 잘 돌아감");
-  // res.send("codiLogList 잘 돌아감");
   // 로그인 되면 userid -> 로그인한 사람 id로 바꾸기
   try {
 

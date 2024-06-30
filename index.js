@@ -300,18 +300,7 @@ app.use("/posts", postRouter);
 
 // app.post("/codiTalkBox", async (req, res) => {
 //   console.log(req.body);
-//   const {
-//     temperature,
-//     maxTemp,
-//     minTemp,
-//     rain,
-//     dust,
-//     uv,
-//     tops,
-//     bottoms,
-//     outerwear,
-//     others,
-//   } = req.body;
+//   const { temperature, maxTemp, minTemp, rain, dust, uv, clothes } = req.body;
 
 //   // 날씨를 전달해주는 prompt
 //   let codiPrompt = "";
@@ -319,15 +308,11 @@ app.use("/posts", postRouter);
 //   codiPrompt += `오늘의 날씨에 적합한 코디를 알려줘`;
 //   codiPrompt += `코디 정보는 3~4줄로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘`;
 //   codiPrompt += `사용자의 성별은 여자`;
-//   codiPrompt += `사용자의 옷장에는 아래의 옷들이 들어있어
-//     1. tops: ${tops}
-//     2. bottoms: ${bottoms}
-//     3. outerwear: ${outerwear}
-//     4. others: ${others}`;
+//   codiPrompt += `사용자의 옷장에는 ${clothes} 이런 옷들이 들어있어. 이 옷장에 있는 옷들로만 추천해줘`;
 //   codiPrompt += `tops에는 각각 긴팔, 반팔, 민소매 종류로 있고, bottoms에는 각각 긴바지, 반바지 종류가 있어`;
 //   codiPrompt += `주의할 점은 날씨에 관한 얘기는 하면 안 되고, 사용자의 성별이 여자일 경우에만 블라우스, 롱스커트, 미니스커트, 원피스를 제시해줘. 남자일 경우에는 저 코디를 제시받으면 안 돼`;
 //   codiPrompt += `자외선이 아무리 높아도 자외선 차단제 얘기는 하면 안 돼`;
-//   codiPrompt += `신발 얘기는 강수확률이 60% 이상일 때만 "장화 신고 가!" 덧붙여줘. 그 외에는 신발 얘기는 하면 안 돼`;
+//   codiPrompt += `신발 얘기는 강수확률이 60% 이상일 때만 "비오니까 장화 신고 가!" 덧붙여줘. 그 외에는 신발 얘기는 하면 안 돼`;
 
 //   // prompt를 전달하고 결과를 받아옴
 //   const result = await callCodiAI(codiPrompt);
@@ -364,7 +349,7 @@ app.use("/posts", postRouter);
 //         { role: "user", content: codiPrompt },
 //       ],
 //       max_tokens: 1000, // 돈 많이 나갈까봐 글자수 제한;
-//       temperature: 1.0, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 안전한 선택을, 1.0에 가까울수록 더 창의적인 선택을 함.
+//       temperature: 0.8, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 안전한 선택을, 1.0에 가까울수록 더 창의적인 선택을 함.
 //       top_p: 1, // 0.0 ~ 1.0 사이의 값. 1.0에 가까울수록 다양한 선택을 함.
 //       frequency_penalty: 0.0, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 반복적인 선택을 함.
 //       presence_penalty: 0.0, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 새로운 선택을 함.

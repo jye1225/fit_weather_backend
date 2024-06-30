@@ -3,6 +3,7 @@ const router = express.Router();
 
 // 몽구스 모델 호출
 const Comment = require('../models/commentsModel')
+const Post = require('../models/postModel')
 
 // ---- 댓글 입력
 router.post('/cmntAdd', async (req, res) => {
@@ -14,7 +15,8 @@ router.post('/cmntAdd', async (req, res) => {
       userId: Math.random() * 10, //로그인 기능 생기면 바꾸기
       content
     })
-    res.json({ cmntDoc, msg: 'ok' })
+    const countCmnt = await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
+    res.json({ cmntDoc, countCmnt, msg: 'ok' })
 
   } catch (error) {
     console.error('댓글 입력 서버 에러', error);
@@ -55,7 +57,8 @@ router.delete('/cmntDel/:cmntId', async (req, res) => {
   const { cmntId } = req.params
   console.log(cmntId);
   try {
-    await Comment.findByIdAndDelete(cmntId)
+    await Comment.findByIdAndDelete(cmntId);
+    await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
     res.json({ msg: 'ok' })
 
   } catch (error) {

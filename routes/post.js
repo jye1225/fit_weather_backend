@@ -14,7 +14,8 @@ const postImgUp = multer({ storage: postImgUpload })
 
 // 몽구스 모델 호출
 const Post = require('../models/postModel')
-const Like = require('../models/likeModel')
+const Like = require('../models/likeModel');
+const { log } = require('console');
 
 // ---- 커뮤니티 디테일 페이지 정보 get요청
 router.get('/postDetail/:postId', async (req, res) => {
@@ -32,12 +33,12 @@ router.get('/postDetail/:postId', async (req, res) => {
 // ---- 글 가져오기 get요청
 router.get('/getAllPosts', async (req, res) => {
   try {
-    // const page = parseInt(req.query.page) || 1;
-    // const limit = page === 1 ? 10 : 5;  // 첫 페이지는 5개, 나머지는 5개
-    // const skip = page === 1 ? 0 : 5 + (page - 2) * 5;  // 첫 페이지 이후 스킵 계산
+    const page = parseInt(req.query.page) || 1;
+    const limit = page === 1 ? 15 : 5;  // 첫 페이지는 5개, 나머지는 5개
+    const skip = page === 1 ? 0 : 5 + (page - 2) * 5;  // 첫 페이지 이후 스킵 계산
 
     const postsList = await Post.find().sort({ createdAt: -1 })
-    // .skip(skip).limit(limit)
+      .skip(skip).limit(limit)
     const total = await Post.countDocuments();
 
     res.json({
@@ -112,6 +113,26 @@ router.post('/like', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: '좋아요 서버 에러' });
+  }
+
+})
+
+// ---- 코디 리뷰 클릭
+router.put('/updateReview/:postId', async (req, res) => {
+  console.log(req.body)
+  console.log(req.params)
+  const { postId } = req.params
+  const { btnType, count } = req.body
+
+  const updateField = `coordi${btnType}`
+  const updateCount = count === 'increment' ? 1 : -1;
+
+  try {
+    const updateReview = await Post.findByIdAndUpdate(postId, { $inc: { [updateField]: updateCount } })
+    console.log(updateReview);
+    res.json(updateReview)
+  } catch (error) {
+    console.error('코디 리뷰 서버 에서', error);
   }
 
 })

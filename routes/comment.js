@@ -64,12 +64,18 @@ router.delete('/cmntDel/:cmntId', async (req, res) => {
   }
 })
 
-// // 댓글 수정
-// app.put('/updateComment/:cmntId', async (req, res) => {
-//   const { cmntId } = req.params;
-//   const { content } = req.body;
-//   await Comment.findByIdAndUpdate(cmntId, { content });
-//   res.json({ message: 'complite' })
-// })
+// ---- 댓글 수정
+router.put('/cmntUpdate/:cmntId', async (req, res) => {
+  const { cmntId } = req.params;
+  const { comment } = req.body;
+  console.log(cmntId, comment);
+  try {
+    await Comment.findByIdAndUpdate(cmntId, { content: comment });
+    res.json({ message: 'ok' })
+  } catch (error) {
+    console.error(error);
+    res.status(500).json('댓글 수정 서버 에러', error);
+  }
+})
 
 module.exports = router;

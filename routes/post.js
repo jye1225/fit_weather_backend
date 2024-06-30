@@ -38,7 +38,7 @@ router.get('/getAllPosts', async (req, res) => {
     const skip = page === 1 ? 0 : 5 + (page - 2) * 5;  // 첫 페이지 이후 스킵 계산
 
     const postsList = await Post.find().sort({ createdAt: -1 })
-      .skip(skip).limit(limit)
+    // .skip(skip).limit(limit)
     const total = await Post.countDocuments();
 
     res.json({
@@ -224,9 +224,6 @@ router.put('/postUpdate/:postId', postImgUp.single('file'), async (req, res) => 
   //   res.json({ message: 'ok' })
   // })
 })
-
-
-
 
 
 module.exports = router;

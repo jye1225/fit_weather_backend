@@ -1,12 +1,12 @@
 const https = require("https");
-const fs = require("fs");
 const cors = require("cors");
+const authRoutes = require("./middleware/auth");
+const fs = require("fs");
 const path = require("path");
-const authRoutes = require("./routes/auth");
 const multer = require("multer");
 require("dotenv").config();
 
-//express
+// express
 const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -17,127 +17,88 @@ const certificate = fs.readFileSync("certs/cert.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
 // CORS 설정
-const allowedOrigins = ["http://localhost:3000", "https://localhost:3000"]; //http와 https 모두를 허용하도록 설정
+const allowedOrigins = ["http://localhost:3000", "https://localhost:3000"]; // http와 https 모두를 허용하도록 설정
 app.use(
   cors({
     credentials: true,
-    origin: true, // 모든 출처 허용
+    origin: allowedOrigins,
     methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: ["Content-Type"],
   })
 );
 
-//--- 예은 설정값 ---
+// ------- 예은 설정값 --------
 
-const bodyParser = require("body-parser");
-const cookieParser = require("cookie-parser");
-const { User } = require("./models/User.js");
-const { auth } = require("./middleware/auth.js");
-
-const config = require("./config/key.js");
-
-// application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({ extended: true }));
-// application/json
-app.use(bodyParser.json());
-app.use(cookieParser());
+app.use(express.json());
 
 // mongoDB 연결
 const mongoose = require("mongoose");
-const mongoURI = process.env.MONGODB_URI;
-mongoose
-  .connect(mongoURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("MongoDB Connected..."))
-  .catch((err) => console.log(err));
+const connectUri =
+  "mongodb+srv://fitweather33:0i9znTMj22IV0a8D@cluster0.ehwrc44.mongodb.net/fitweather?retryWrites=true&w=majority&appName=Cluster0";
+mongoose.connect(connectUri);
 
-// authRoutes 추가
-app.use("/api/auth", authRoutes);
+const User = require("./models/User"); // User 모델 생성
 
-app.get("/api/users/", (req, res) => res.send("Hello World! 안녕하세요~"));
+const bcrypt = require("bcryptjs");
+const salt = bcrypt.genSaltSync(10);
 
-// 회원가입 부분
-app.post("/api/users/register", (req, res) => {
-  // 회원 가입 할 때 필요한 정보들을 client에서 가져오면 그것들을 데이터베이스에 넣어준다.
-  const user = new User(req.body); // body parser를 이용해서 json 형식으로 정보를 가져온다.
+const jwt = require("jsonwebtoken");
+const jwtSecret = "qwerasdf"; // 환경변수로 처리
 
-  user.save((err, userInfo) => {
-    // 몽고디비에서 오는 메소드
-    if (err) return res.json({ success: false, err });
-    return res.status(200).json({
-      // status(200)은 성공했다는 뜻
-      success: true,
+const cookieParser = require("cookie-parser");
+app.use(cookieParser());
+
+// 회원가입 기능
+app.post("/register", async (req, res) => {
+  const { userid, username, password, gender } = req.body;
+  console.log(req.body);
+
+  try {
+    const userDoc = await User.create({
+      userid,
+      username,
+      password: bcrypt.hashSync(password, salt),
+      gender,
     });
-  });
+    res.json(userDoc);
+  } catch (e) {
+    res.status(400).json({ message: "failed", error: e.message });
+  }
 });
 
-// 로그인 부분
-app.post("/api/users/login", (req, res) => {
-  // 요청된 이메일을 데이터베이스에 있는지 찾는다.
-  User.findOne(
-    {
-      email: req.body.email,
-    },
-    (err, user) => {
-      if (!user) {
-        return res.json({
-          loginSuccess: false,
-          message: "이메일에 해당하는 유저가 없습니다.",
-        });
-      }
-      // 요청된 이메일이 데이터 베이스에 있다면 비밀번호가 맞는 비밀번호인지 확인
-      user.comparePassword(req.body.password, (err, isMatch) => {
-        if (!isMatch) {
-          return res.json({
-            loginSuccess: false,
-            message: "비밀번호가 틀렸습니다.",
-          });
-        }
-        // 비밀번호까지 맞다면 토큰 생성
-        user.generateToken((err, user) => {
-          if (err) return res.status(400).send(err);
-          // 토큰 저장 -> 쿠키, 로컬스토리지, 세션 등등
-          res
-            .cookie("x_auth", user.token)
-            .status(200)
-            .json({ loginSuccess: true, userId: user._id });
-        });
+// 로그인 기능
+app.post("/login", async (req, res) => {
+  const { userid, password } = req.body;
+  const userDoc = await User.findOne({ userid });
+
+  if (!userDoc) {
+    res.json({ message: "nouser" });
+    return;
+  }
+
+  // jwt.sign( { token에 들어갈 데이터 }, 비밀키, { token의 유효기간(안써도됨) }, ( err, token )=>{} )
+  const passOK = bcrypt.compareSync(password, userDoc.password); // 두 정보가 맞으면 true, 틀리면 false
+  if (passOK) {
+    jwt.sign({ userid, id: userDoc._id }, jwtSecret, {}, (err, token) => {
+      if (err) throw err;
+      console.log(token);
+      res.json({
+        token,
+        id: userDoc._id,
+        userid,
       });
-    }
-  );
+    });
+  } else {
+    res.json({ message: "failed" });
+  }
 });
 
-// auth 미들웨어를 통과해야 다음으로 넘어감
-app.get("/api/users/auth", auth, (req, res) => {
-  // 여기까지 미들웨어를 통과해 왔다는 얘기는 Authentication이 true라는 말
-  res.status(200).json({
-    _id: req.user._id,
-    isAdmin: req.user.role === 0 ? false : true,
-    isAuth: true,
-    email: req.user.email,
-    name: req.user.name,
-    lastname: req.user.lastname,
-    role: req.user.role,
-    image: req.user.image,
-  });
+// 이거 삭제하면 로그아웃 안됨
+app.post("/logout", (req, res) => {
+  res.cookie("token", "").json();
 });
 
-// 로그아웃 부분
-app.get("/api/users/logout", auth, (req, res) => {
-  console.log(req.user);
-  User.findOneAndUpdate({ _id: req.user._id }, { token: "" }, (err, user) => {
-    if (err) return res.json({ success: false, err });
-    return res.status(200).send({ success: true });
-  });
-});
-
-app.get("/api/hello", (req, res) => {
-  res.send("안녕하세요");
-});
-
-//--- 예은 설정값 끝 ---
+// -------- 예은 설정값 끝 ---------
 
 //// >>>>>> 나영 부분 시작
 app.use("/codiUploads", express.static(path.join(__dirname, "codiUploads"))); //Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
@@ -310,13 +271,13 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"));
 });
 
-// HTTPS 서버 생성 및 리스닝 - 나영
+// HTTPS 서버 생성 및 리스닝 - 맥
 // const httpsServer = https.createServer(credentials, app);
 // httpsServer.listen(PORT, () => {
 //   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 // });
 
-// HTTP 서버 - 명은, 지선
+// HTTP 서버 - 윈도우
 app.listen(PORT, () => {
   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 });

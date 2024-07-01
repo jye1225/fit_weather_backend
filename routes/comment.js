@@ -22,7 +22,8 @@ router.post('/cmntAdd', async (req, res) => {
     try {
       const cmntDoc = await Comment.create({
         postId,
-        userId: userInfo.userid, //로그인 기능 생기면 바꾸기
+        userId: userInfo.userid,
+        username: userInfo.username,
         content
       })
       const countCmnt = await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });

@@ -210,8 +210,10 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 
 const postRouter = require("./routes/post.js");
 const commentRouter = require('./routes/comment.js')
+const feedRouter = require('./routes/feed.js')
 app.use("/posts", postRouter);
 app.use("/comments", commentRouter);
+// app.use("/insta", feedRouter)
 
 // --------------커뮤니티 부분 끝------------------------------
 

@@ -84,12 +84,13 @@ app.post("/login", async (req, res) => {
   // jwt.sign( { token에 들어갈 데이터 }, 비밀키, { token의 유효기간(안써도됨) }, ( err, token )=>{} )
   const passOK = bcrypt.compareSync(password, userDoc.password); // 두 정보가 맞으면 true, 틀리면 false
   if (passOK) {
-    jwt.sign({ userid, id: userDoc._id, username: userDoc.username }, jwtSecret, {}, (err, token) => {
+    jwt.sign({ userid, username: userDoc.username, id: userDoc._id }, jwtSecret, {}, (err, token) => {
       if (err) throw err;
       console.log(token);
       res.cookie('token', token).json({
         token,
         id: userDoc._id,
+        username: userDoc.username,
         userid,
         username: userDoc.username
       });
@@ -205,6 +206,7 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 });
 
 //// ~~~~~~~~~~~~~~ 나영 부분 끝~~~~~~~~~~~~~~
+
 
 // --------------커뮤니티 부분 시작--------------------------
 
@@ -363,12 +365,12 @@ app.get("/", (req, res) => {
 // });
 
 // HTTPS 서버 생성 및 리스닝 - 맥
-// const httpsServer = https.createServer(credentials, app);
-// httpsServer.listen(PORT, () => {
-//   console.log(`${PORT}번 포트 돌아가는 즁~!`);
-// });
-
-// HTTP 서버 - 윈도우
-app.listen(PORT, () => {
+const httpsServer = https.createServer(credentials, app);
+httpsServer.listen(PORT, () => {
   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 });
+
+// // HTTP 서버 - 윈도우
+// app.listen(PORT, () => {
+//   console.log(`${PORT}번 포트 돌아가는 즁~!`);
+// });

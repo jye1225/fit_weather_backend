@@ -17,7 +17,6 @@ const certificate = fs.readFileSync("certs/cert.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
 // CORS 설정
-
 app.use(
   cors({
     credentials: true,
@@ -33,9 +32,14 @@ app.use(express.json());
 
 // mongoDB 연결
 const mongoose = require("mongoose");
-const connectUri =
-  "mongodb+srv://fitweather33:0i9znTMj22IV0a8D@cluster0.ehwrc44.mongodb.net/fitweather?retryWrites=true&w=majority&appName=Cluster0";
-mongoose.connect(connectUri);
+const mongoURI = process.env.MONGODB_URI;
+mongoose
+  .connect(mongoURI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("MongoDB Connected..."))
+  .catch((err) => console.log(err));
 
 const User = require("./models/User"); // User 모델 생성
 
@@ -75,6 +79,7 @@ app.post("/login", async (req, res) => {
     res.json({ message: "nouser" });
     return;
   }
+  console.log(userDoc);
 
   // jwt.sign( { token에 들어갈 데이터 }, 비밀키, { token의 유효기간(안써도됨) }, ( err, token )=>{} )
   const passOK = bcrypt.compareSync(password, userDoc.password); // 두 정보가 맞으면 true, 틀리면 false
@@ -82,11 +87,12 @@ app.post("/login", async (req, res) => {
     jwt.sign({ userid, username: userDoc.username, id: userDoc._id }, jwtSecret, {}, (err, token) => {
       if (err) throw err;
       console.log(token);
-      res.json({
+      res.cookie('token', token).json({
         token,
         id: userDoc._id,
         username: userDoc.username,
         userid,
+        username: userDoc.username
       });
     });
   } else {
@@ -100,6 +106,7 @@ app.post("/logout", (req, res) => {
 });
 
 // -------- 예은 설정값 끝 ---------
+
 //// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
 app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
 
@@ -201,14 +208,14 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 //// ~~~~~~~~~~~~~~ 나영 부분 끝~~~~~~~~~~~~~~
 
 
-
-
 // --------------커뮤니티 부분 시작--------------------------
 
 const postRouter = require("./routes/post.js");
 const commentRouter = require('./routes/comment.js')
+const feedRouter = require('./routes/feed.js')
 app.use("/posts", postRouter);
 app.use("/comments", commentRouter);
+// app.use("/insta", feedRouter)
 
 // --------------커뮤니티 부분 끝------------------------------
 

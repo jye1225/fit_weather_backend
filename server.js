@@ -11,6 +11,10 @@ const upload = multer({ dest: "uploads/" });
 const mongoose = require("mongoose");
 const user = require("./routes/user");
 app.use("/user", user);
+
+require("dotenv").config();
+const REST_API_KEY = process.env.REACT_APP_KAKAO_APP_KEY;
+const REDIRECT_URI = process.env.REACT_APP_REDIRECT_URI;
 //---------------
 
 //cors 이슈 해결

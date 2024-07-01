@@ -14,7 +14,7 @@ const CodiLogSchema = new Schema(
         codiDate: String,
 
         userid: String,
-        username: String,
+        // username: String,
     },
     {
         timestamps: true,

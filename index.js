@@ -108,7 +108,8 @@ app.post("/logout", (req, res) => {
 // -------- 예은 설정값 끝 ---------
 
 //// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
-app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
+app.use('/uploads/codiLog', express.static(path.join(__dirname, 'uploads/codiLog')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
+
 
 // codiLogDetail GET
 app.get('/codiLogDetail/:id', async (req, res) => {
@@ -123,11 +124,11 @@ app.get('/codiLogDetail/:id', async (req, res) => {
 })
 
 // codiLogToday Get
-app.get('/codiLogToday/:today', async (req, res) => {
-  // console.log('요청 성공 >> codiLogToday Get ');
-  const { today } = req.params;
+app.get('/codiLogToday/:today/:userid', async (req, res) => {
+  console.log('>>>>>>요청 성공 >> codiLogToday Get ');
+  const { today, userid } = req.params;
   try {
-    const codiLogToday = await CodiLogModel.find({ userid: 'userid', codiDate: today });
+    const codiLogToday = await CodiLogModel.find({ userid: userid, codiDate: today });
     if (codiLogToday.length > 0) {
       console.log(codiLogToday[0]);
       res.json(codiLogToday[0]);
@@ -142,9 +143,9 @@ app.get('/codiLogToday/:today', async (req, res) => {
 });
 
 // codiLogSimilar Get
-app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky', (req, res) => {
-  const { maxTemp, minTemp, sky } = req.params;
-  console.log('-------------요청 성공 >> ', maxTemp, minTemp, sky); // 예 ) 31 21 구름많음
+app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid', (req, res) => {
+  const { maxTemp, minTemp, sky, userid } = req.params;
+  console.log('-------------요청 성공 >> ', maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음
   // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
   //1순위 : 기온차 조건 ok + sky 똑같음
   //2순위 : 기온차 조건 ok 
@@ -152,26 +153,26 @@ app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky', (req, res) => {
 })
 
 // codiLogList GET
-app.get('/codiLogList', async (req, res) => {
+app.get('/codiLogList/:userid', async (req, res) => {
   console.log("codiLogList 요청 옴");
   // res.send("codiLogList 잘 돌아감");
+  const { userid } = req.params;
 
   // 로그인 되면 userid -> 로그인한 사람 id로 바꾸기
   try {
-
-    const codiLogList = await CodiLogModel.find({ userid: 'userid' }).sort({ codiDate: 1 });
+    const codiLogList = await CodiLogModel.find({ userid: userid }).sort({ codiDate: 1 });
     // console.log(codiLogList);
     res.json(codiLogList); // 생성된 codiLogList를 JSON 형태로 클라이언트에 응답으로 보냄
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-
 });
+
 
 // multer 설정
 const storage = multer.diskStorage({
-  destination: "codiUploads/",
+  destination: "uploads/codiLog",
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
   },
@@ -180,8 +181,9 @@ const upload = multer({ storage: storage });
 
 // codiWrite POST 요청 핸들러
 const CodiLogModel = require("./models/codiLog");
+
 app.post("/codiWrite", upload.single("file"), async (req, res) => {
-  const { memo, tag, address, maxTemp, minTemp, codiDate, sky } = req.body;
+  const { memo, tag, address, maxTemp, minTemp, codiDate, sky, userid } = req.body;
   const { filename, path } = req.file;
   console.log("codiWrite 잘 돌아감", memo, tag, filename, path);
 
@@ -195,13 +197,56 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
       minTemp,
       sky,
       codiDate,
-      username: 'username',
-      userid: 'userid',
+      userid,
     });
     res.json(codiDoc);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+//코디기록 수정페이지 codiEdit PUT
+app.put('/codiEdit/:id', upload.single("file"), async (req, res) => {
+  const { id } = req.params;
+  const { memo, tag } = req.body;
+  const { filename, path } = req.file;
+  console.log("---codiEdit 잘 돌아감", id, memo, tag, filename, path);
+
+  try {
+    await CodiLogModel.findByIdAndUpdate(id, {
+      memo, tag, image: path,
+    });
+    res.status(200).json({ message: "CodiEdit successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "codiEdit - Server Error" });
+  }
+})
+
+// 코디기록 삭제 codiDelete DELETE
+app.delete("/codiDelete/:id", async (req, res) => {
+  const { id } = req.params;
+  console.log('>>codiDelete>>', id);
+
+  try {
+    const codiLog = await CodiLogModel.findById(id);
+    const imgPath = codiLog.image;
+
+    await CodiLogModel.findByIdAndDelete(id);
+
+    fs.unlink(imgPath, (err) => {//uploads/codiLog 폴더의 이미지파일도 삭제되도록
+      if (err) {
+        console.error('파일 삭제 실패:', err);
+        return;
+      }
+      console.log('파일이 성공적으로 삭제되었습니다.');
+    });
+
+    res.status(200).json({ message: "codiDelete successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "codiDelete - Server Error" });
   }
 });
 

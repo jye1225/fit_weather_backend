@@ -84,17 +84,22 @@ app.post("/login", async (req, res) => {
   // jwt.sign( { token에 들어갈 데이터 }, 비밀키, { token의 유효기간(안써도됨) }, ( err, token )=>{} )
   const passOK = bcrypt.compareSync(password, userDoc.password); // 두 정보가 맞으면 true, 틀리면 false
   if (passOK) {
-    jwt.sign({ userid, username: userDoc.username, id: userDoc._id }, jwtSecret, {}, (err, token) => {
-      if (err) throw err;
-      console.log(token);
-      res.cookie('token', token).json({
-        token,
-        id: userDoc._id,
-        username: userDoc.username,
-        userid,
-        username: userDoc.username
-      });
-    });
+    jwt.sign(
+      { userid, username: userDoc.username, id: userDoc._id },
+      jwtSecret,
+      {},
+      (err, token) => {
+        if (err) throw err;
+        console.log(token);
+        res.cookie("token", token).json({
+          token,
+          id: userDoc._id,
+          username: userDoc.username,
+          userid,
+          username: userDoc.username,
+        });
+      }
+    );
   } else {
     res.json({ message: "failed" });
   }
@@ -105,13 +110,28 @@ app.post("/logout", (req, res) => {
   res.cookie("token", "").json();
 });
 
+// 카카오로그인 때문에 ^_^
+let users = [{ id: 1, name: "John Doe", email: "john@example.com" }]; // 예시 사용자 데이터
+
+app.get("/user-info", (req, res) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (token === "exampletoken") {
+    // 예시 토큰 검증
+    res.json({ user: users[0] });
+  } else {
+    res.status(401).json({ error: "Unauthorized" });
+  }
+});
+
 // -------- 예은 설정값 끝 ---------
 
 //// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
-app.use('/codiUploads', express.static(path.join(__dirname, 'codiUploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
+app.use("/codiUploads", express.static(path.join(__dirname, "codiUploads"))); //Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
 
 // codiLogDetail GET
-app.get('/codiLogDetail/:id', async (req, res) => {
+app.get("/codiLogDetail/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const codiLog = await CodiLogModel.findById(id);
@@ -120,20 +140,23 @@ app.get('/codiLogDetail/:id', async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
 // codiLogToday Get
-app.get('/codiLogToday/:today', async (req, res) => {
+app.get("/codiLogToday/:today", async (req, res) => {
   // console.log('요청 성공 >> codiLogToday Get ');
   const { today } = req.params;
   try {
-    const codiLogToday = await CodiLogModel.find({ userid: 'userid', codiDate: today });
+    const codiLogToday = await CodiLogModel.find({
+      userid: "userid",
+      codiDate: today,
+    });
     if (codiLogToday.length > 0) {
       console.log(codiLogToday[0]);
       res.json(codiLogToday[0]);
     } else {
-      console.log('해당날짜 기록 없음');
-      res.json([]);  // 해당 날짜에 대한 데이터가 없을 때 빈 배열을 반환
+      console.log("해당날짜 기록 없음");
+      res.json([]); // 해당 날짜에 대한 데이터가 없을 때 빈 배열을 반환
     }
   } catch (error) {
     console.error(error);
@@ -142,31 +165,31 @@ app.get('/codiLogToday/:today', async (req, res) => {
 });
 
 // codiLogSimilar Get
-app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky', (req, res) => {
+app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky", (req, res) => {
   const { maxTemp, minTemp, sky } = req.params;
-  console.log('-------------요청 성공 >> ', maxTemp, minTemp, sky); // 예 ) 31 21 구름많음
+  console.log("-------------요청 성공 >> ", maxTemp, minTemp, sky); // 예 ) 31 21 구름많음
   // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
   //1순위 : 기온차 조건 ok + sky 똑같음
-  //2순위 : 기온차 조건 ok 
+  //2순위 : 기온차 조건 ok
   //부합하는 기록이 여러개라면 : 랜덤?
-})
+});
 
 // codiLogList GET
-app.get('/codiLogList', async (req, res) => {
+app.get("/codiLogList", async (req, res) => {
   console.log("codiLogList 요청 옴");
   // res.send("codiLogList 잘 돌아감");
 
   // 로그인 되면 userid -> 로그인한 사람 id로 바꾸기
   try {
-
-    const codiLogList = await CodiLogModel.find({ userid: 'userid' }).sort({ codiDate: 1 });
+    const codiLogList = await CodiLogModel.find({ userid: "userid" }).sort({
+      codiDate: 1,
+    });
     // console.log(codiLogList);
     res.json(codiLogList); // 생성된 codiLogList를 JSON 형태로 클라이언트에 응답으로 보냄
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-
 });
 
 // multer 설정
@@ -195,8 +218,8 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
       minTemp,
       sky,
       codiDate,
-      username: 'username',
-      userid: 'userid',
+      username: "username",
+      userid: "userid",
     });
     res.json(codiDoc);
   } catch (error) {
@@ -207,12 +230,11 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 
 //// ~~~~~~~~~~~~~~ 나영 부분 끝~~~~~~~~~~~~~~
 
-
 // --------------커뮤니티 부분 시작--------------------------
 
 const postRouter = require("./routes/post.js");
-const commentRouter = require('./routes/comment.js')
-const feedRouter = require('./routes/feed.js')
+const commentRouter = require("./routes/comment.js");
+const feedRouter = require("./routes/feed.js");
 app.use("/posts", postRouter);
 app.use("/comments", commentRouter);
 // app.use("/insta", feedRouter)
@@ -365,12 +387,12 @@ app.get("/", (req, res) => {
 // });
 
 // HTTPS 서버 생성 및 리스닝 - 맥
-const httpsServer = https.createServer(credentials, app);
-httpsServer.listen(PORT, () => {
-  console.log(`${PORT}번 포트 돌아가는 즁~!`);
-});
-
-// // HTTP 서버 - 윈도우
-// app.listen(PORT, () => {
+// const httpsServer = https.createServer(credentials, app);
+// httpsServer.listen(PORT, () => {
 //   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 // });
+
+// // HTTP 서버 - 윈도우
+app.listen(PORT, () => {
+  console.log(`${PORT}번 포트 돌아가는 즁~!`);
+});

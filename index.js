@@ -66,43 +66,34 @@ app.post("/register", async (req, res) => {
 // 로그인 기능
 app.post("/login", async (req, res) => {
   const { userid, password } = req.body;
-  try {
-    const userDoc = await User.findOne({ userid });
+  const userDoc = await User.findOne({ userid });
 
-    if (!userDoc) {
-      return res.status(400).json({ message: "User not found" });
-    }
+  if (!userDoc) {
+    res.json({ message: "nouser" });
+    return;
+  }
 
-    const passOK = await bcrypt.compare(password, userDoc.password);
-    if (passOK) {
-      const token = jwt.sign(
-        { userid, username: userDoc.username, id: userDoc._id },
-        jwtSecret,
-        { expiresIn: "1d" }
-      );
-
-      res
-        .cookie("token", token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-        })
-        .json({
-          id: userDoc._id,
-          username: userDoc.username,
-          userid: userDoc.userid,
-        });
-    } else {
-      res.status(400).json({ message: "Invalid password" });
-    }
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Server error" });
+  // jwt.sign( { token에 들어갈 데이터 }, 비밀키, { token의 유효기간(안써도됨) }, ( err, token )=>{} )
+  const passOK = bcrypt.compareSync(password, userDoc.password); // 두 정보가 맞으면 true, 틀리면 false
+  if (passOK) {
+    jwt.sign({ userid, username: userDoc.username, id: userDoc._id }, jwtSecret, {}, (err, token) => {
+      if (err) throw err;
+      console.log(token);
+      res.cookie('token', token).json({
+        token,
+        id: userDoc._id,
+        username: userDoc.username,
+        userid,
+      });
+    });
+  } else {
+    res.json({ message: "failed" });
   }
 });
 
-// 로그아웃 기능
+// 이거 삭제하면 로그아웃 안됨
 app.post("/logout", (req, res) => {
-  res.clearCookie("token").json({ message: "Logged out successfully" });
+  res.cookie("token", "").json();
 });
 
 // 카카오 로그인
@@ -153,17 +144,14 @@ app.get("/kakao-login", async (req, res) => {
         secure: process.env.NODE_ENV === "production",
       })
       .redirect(
-        `${
-          process.env.FRONTEND_URL
-        }/complete-profile?loginSuccess=true&userId=${
-          user._id
+        `${process.env.FRONTEND_URL
+        }/complete-profile?loginSuccess=true&userId=${user._id
         }&username=${encodeURIComponent(user.username)}`
       );
   } catch (error) {
     console.error("카카오 로그인 에러:", error);
     res.redirect(
-      `${
-        process.env.FRONTEND_URL
+      `${process.env.FRONTEND_URL
       }/complete-profile?loginSuccess=false&error=${encodeURIComponent(
         "카카오 로그인 실패"
       )}`
@@ -174,7 +162,7 @@ app.get("/kakao-login", async (req, res) => {
 // -------- 예은 설정값 끝 ---------
 
 //// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
-app.use('/uploads/codiLog', express.static(path.join(__dirname, 'uploads/codiLog')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
 
 // codiLogDetail GET
 app.get("/codiLogDetail/:id", async (req, res) => {
@@ -359,7 +347,6 @@ app.use("/comments", commentRouter);
 
 const { OpenAI } = require("openai"); // openai 모듈
 
-// openai apiKey
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -495,6 +482,14 @@ async function callCodiAI(codiPrompt) {
 }
 
 //// <<<<<<< 지선 부분 끝
+
+// ---- 마이페이지 - 내 커뮤니티 활동 - 시작 -------
+
+const CommuCollRouter = require('./routes/commuColl.js')
+app.use('/mypage', CommuCollRouter)
+
+// ---- 마이페이지 - 내 커뮤니티 활동 - 끝 ---------
+
 
 // 기본 루트 경로(/)에 대한 GET 요청 핸들러
 app.get("/", (req, res) => {

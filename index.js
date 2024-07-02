@@ -14,7 +14,6 @@ const cookieParser = require("cookie-parser");
 // express
 const app = express();
 const PORT = 8080;
-// const PORT = process.env.PORT || 8080;
 
 // SSL/TLS 인증서 파일 경로 설정
 const privateKey = fs.readFileSync("certs/cert.key", "utf8");
@@ -399,9 +398,8 @@ app.post("/codiTalkBox", async (req, res) => {
 async function callCodiAI(codiPrompt) {
   try {
     const result = await openai.chat.completions.create({
-      model: "gpt-4o", // gpt 모델 버전
+      model: "gpt-4o",
       messages: [
-        // 1. GPT 역할 부여 샘플
         {
           role: "system",
           content:
@@ -418,14 +416,13 @@ async function callCodiAI(codiPrompt) {
             "저는 주변인을 잘 챙기고 꼼꼼한 성격입니다. 날씨에 맞게 옷을 잘 입고 패션에 대해 잘 압니다.",
         },
 
-        // 2. 내가 전달한 prompt
         { role: "user", content: codiPrompt },
       ],
-      max_tokens: 1000, // 돈 많이 나갈까봐 글자수 제한;
-      temperature: 0.8, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 안전한 선택을, 1.0에 가까울수록 더 창의적인 선택을 함.
-      top_p: 1, // 0.0 ~ 1.0 사이의 값. 1.0에 가까울수록 다양한 선택을 함.
-      frequency_penalty: 0.0, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 반복적인 선택을 함.
-      presence_penalty: 0.0, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 새로운 선택을 함.
+      max_tokens: 1000,
+      temperature: 0.8,
+      top_p: 1,
+      frequency_penalty: 0.0,
+      presence_penalty: 0.0,
     });
 
     console.log("result: ", result.choices[0].message);

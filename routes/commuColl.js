@@ -51,7 +51,6 @@ router.get('/comments', async (req, res) => {
   })
 })
 
-const mongoose = require('mongoose');
 // 좋아요 리스트 get요청
 router.get('/likes', async (req, res) => {
   const { token } = req.cookies;
@@ -62,6 +61,11 @@ router.get('/likes', async (req, res) => {
       const userId = userInfo.userid
       console.log("유저정보", userId, "/", userInfo.username);
       const LikeList = await Like.find({ userId })
+      if (LikeList.length === 0) {
+        // LikeList가 비어 있는 경우 빈 배열 반환
+        return res.json([]);
+      }
+
       const postIds = LikeList[0].postId
 
       // posts 컬렉션에서 해당 postId와 일치하는 게시물들 찾기
@@ -70,6 +74,7 @@ router.get('/likes', async (req, res) => {
       }))
       const sortedPosts = posts.sort((a, b) => b.createdAt - a.createdAt);
       res.json(sortedPosts)
+
 
     } catch (error) {
       console.error(error);

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const LikeSchema = new Schema({
-  postId: String,
+  postId: { type: [String] },
   userId: String
 });
 

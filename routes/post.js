@@ -86,7 +86,7 @@ router.post("/writePost", postImgUp.single("file"), async (req, res) => {
       res.json(postDoc);
     } catch (err) {
       console.error(err);
-      res.status(500).json({ err: "글쓰기 서버 에러" });
+      res.status(500).json("글쓰기 서버 에러", { err });
     }
   });
 });

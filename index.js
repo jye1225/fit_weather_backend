@@ -13,7 +13,8 @@ const cookieParser = require("cookie-parser");
 
 // express
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = 8080;
+// const PORT = process.env.PORT || 8080;
 
 // SSL/TLS 인증서 파일 경로 설정
 const privateKey = fs.readFileSync("certs/cert.key", "utf8");
@@ -89,8 +90,7 @@ app.post("/login", async (req, res) => {
           username: userDoc.username,
           userid,
         });
-      }
-    );
+      });
   } else {
     res.json({ message: "failed" });
   }
@@ -284,7 +284,6 @@ app.delete("/codiDelete/:id", async (req, res) => {
     res.status(500).json({ error: "codiDelete - Server Error" });
   }
 });
-
 //// ~~~~~~~~~~~~~~ 나영 부분 끝~~~~~~~~~~~~~~
 
 // --------------커뮤니티 부분 시작--------------------------
@@ -448,12 +447,12 @@ app.get("/", (req, res) => {
 // });
 
 // HTTPS 서버 생성 및 리스닝 - 맥
-// const httpsServer = https.createServer(credentials, app);
-// httpsServer.listen(PORT, () => {
-//   console.log(`${PORT}번 포트 돌아가는 즁~!`);
-// });
-
-// HTTP 서버 - 윈도우
-app.listen(PORT, () => {
+const httpsServer = https.createServer(credentials, app);
+httpsServer.listen(PORT, () => {
   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 });
+
+// HTTP 서버 - 윈도우
+// app.listen(PORT, () => {
+//   console.log(`${PORT}번 포트 돌아가는 즁~!`);
+// });

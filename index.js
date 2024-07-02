@@ -83,7 +83,7 @@ app.post("/login", async (req, res) => {
       (err, token) => {
         if (err) throw err;
         console.log(token);
-        res.json({
+        res.cookie("token", token).json({
           token,
           id: userDoc._id,
           username: userDoc.username,
@@ -101,13 +101,8 @@ app.post("/logout", (req, res) => {
   res.cookie("token", "").json();
 });
 
-// -------- 예은 설정값 끝 ---------
-
 //// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
-app.use(
-  "/uploads/codiLog",
-  express.static(path.join(__dirname, "uploads/codiLog"))
-); //Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // codiLogDetail GET
 app.get("/codiLogDetail/:id", async (req, res) => {

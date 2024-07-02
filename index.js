@@ -34,10 +34,7 @@ app.use(express.json());
 const mongoose = require("mongoose");
 const mongoURI = process.env.MONGODB_URI;
 mongoose
-  .connect(mongoURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(mongoURI)
   .then(() => console.log("MongoDB Connected..."))
   .catch((err) => console.log(err));
 
@@ -125,12 +122,12 @@ app.get('/codiLogDetail/:id', async (req, res) => {
 
 // codiLogToday Get
 app.get('/codiLogToday/:today/:userid', async (req, res) => {
-  console.log('>>>>>>요청 성공 >> codiLogToday Get ');
+  // console.log('>>>>>>요청 성공 >> codiLogToday Get ');
   const { today, userid } = req.params;
   try {
     const codiLogToday = await CodiLogModel.find({ userid: userid, codiDate: today });
     if (codiLogToday.length > 0) {
-      console.log(codiLogToday[0]);
+      // console.log(codiLogToday[0]);
       res.json(codiLogToday[0]);
     } else {
       console.log('해당날짜 기록 없음');
@@ -143,18 +140,46 @@ app.get('/codiLogToday/:today/:userid', async (req, res) => {
 });
 
 // codiLogSimilar Get
-app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid', (req, res) => {
+app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid', async (req, res) => {
   const { maxTemp, minTemp, sky, userid } = req.params;
   console.log('-------------요청 성공 >> ', maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음
-  // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
+  // 비슷한 날씨 : 기온 차이 3도 미만 으로 설정
   //1순위 : 기온차 조건 ok + sky 똑같음
   //2순위 : 기온차 조건 ok 
   //부합하는 기록이 여러개라면 : 랜덤?
+  try {
+    const ListSimilarTemp = await CodiLogModel.find({
+      userid: userid,
+      maxTemp: { $gte: parseInt(maxTemp) - 2, $lte: parseInt(maxTemp) + 2 },
+      minTemp: { $gte: parseInt(minTemp) - 2, $lte: parseInt(minTemp) + 2 },
+    });
+
+    let setListCheckSimilar = []; // 
+    if (ListSimilarTemp.length > 0) {
+      const ListSimilarSky = ListSimilarTemp.filter(item => item.sky === sky);
+      if (ListSimilarSky.length !== 0) {
+        setListCheckSimilar = [...ListSimilarSky];
+      } else { setListCheckSimilar = [...ListSimilarTemp] }
+
+      console.log('---조건 부합한 기록 갯수 ---', setListCheckSimilar.length);
+      const randomIndex = Math.floor(Math.random() * setListCheckSimilar.length);    // 0부터 (listLength-1) 사이의 랜덤한 정수 얻기
+      console.log('@@@랜덤숫자, 해당 기록@@@@', randomIndex, setListCheckSimilar[randomIndex]);
+      res.json(setListCheckSimilar[randomIndex]);
+
+    } else {
+      res.json([]);  // 해당 데이터가 없을 때 빈 배열을 반환
+      console.log('!!!!조간 부합한 기록이 없다!!!!');
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
+  }
+
 })
 
 // codiLogList GET
 app.get('/codiLogList/:userid', async (req, res) => {
-  console.log("codiLogList 요청 옴");
+  // console.log("codiLogList 요청 옴");
   // res.send("codiLogList 잘 돌아감");
   const { userid } = req.params;
 
@@ -185,7 +210,7 @@ const CodiLogModel = require("./models/codiLog");
 app.post("/codiWrite", upload.single("file"), async (req, res) => {
   const { memo, tag, address, maxTemp, minTemp, codiDate, sky, userid } = req.body;
   const { filename, path } = req.file;
-  console.log("codiWrite 잘 돌아감", memo, tag, filename, path);
+  // console.log("codiWrite 잘 돌아감", memo, tag, filename, path);
 
   try {
     const codiDoc = await CodiLogModel.create({
@@ -197,6 +222,7 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
       minTemp,
       sky,
       codiDate,
+      // codiDate: '2024-07-01',
       userid,
     });
     res.json(codiDoc);

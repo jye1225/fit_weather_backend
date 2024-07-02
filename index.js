@@ -66,43 +66,40 @@ app.post("/register", async (req, res) => {
 // 로그인 기능
 app.post("/login", async (req, res) => {
   const { userid, password } = req.body;
-  try {
-    const userDoc = await User.findOne({ userid });
+  const userDoc = await User.findOne({ userid });
 
-    if (!userDoc) {
-      return res.status(400).json({ message: "User not found" });
-    }
+  if (!userDoc) {
+    res.json({ message: "nouser" });
+    return;
+  }
 
-    const passOK = await bcrypt.compare(password, userDoc.password);
-    if (passOK) {
-      const token = jwt.sign(
-        { userid, username: userDoc.username, id: userDoc._id },
-        jwtSecret,
-        { expiresIn: "1d" }
-      );
-
-      res
-        .cookie("token", token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-        })
-        .json({
+  // jwt.sign( { token에 들어갈 데이터 }, 비밀키, { token의 유효기간(안써도됨) }, ( err, token )=>{} )
+  // jwt.sign( { token에 들어갈 데이터 }, 비밀키, { token의 유효기간(안써도됨) }, ( err, token )=>{} )
+  const passOK = bcrypt.compareSync(password, userDoc.password); // 두 정보가 맞으면 true, 틀리면 false
+  if (passOK) {
+    jwt.sign(
+      { userid, username: userDoc.username, id: userDoc._id },
+      jwtSecret,
+      {},
+      (err, token) => {
+        if (err) throw err;
+        console.log(token);
+        res.cookie("token", token).json({
+          token,
           id: userDoc._id,
           username: userDoc.username,
-          userid: userDoc.userid,
+          userid,
         });
-    } else {
-      res.status(400).json({ message: "Invalid password" });
-    }
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Server error" });
+      }
+    );
+  } else {
+    res.json({ message: "failed" });
   }
 });
 
-// 로그아웃 기능
+// 이거 삭제하면 로그아웃 안됨
 app.post("/logout", (req, res) => {
-  res.clearCookie("token").json({ message: "Logged out successfully" });
+  res.cookie("token", "").json();
 });
 
 // 카카오 로그인
@@ -174,7 +171,7 @@ app.get("/kakao-login", async (req, res) => {
 // -------- 예은 설정값 끝 ---------
 
 //// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
-app.use('/uploads/codiLog', express.static(path.join(__dirname, 'uploads/codiLog')));//Express 앱에서 정적 파일을 서빙하기 위한 설정: express.static 미들웨어를 사용하여 정적 파일을 서빙할 수 있도록
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // codiLogDetail GET
 app.get("/codiLogDetail/:id", async (req, res) => {
@@ -190,11 +187,14 @@ app.get("/codiLogDetail/:id", async (req, res) => {
 
 // codiLogToday Get
 
-app.get('/codiLogToday/:today/:userid', async (req, res) => {
+app.get("/codiLogToday/:today/:userid", async (req, res) => {
   // console.log('>>>>>>요청 성공 >> codiLogToday Get ');
   const { today, userid } = req.params;
   try {
-    const codiLogToday = await CodiLogModel.find({ userid: userid, codiDate: today });
+    const codiLogToday = await CodiLogModel.find({
+      userid: userid,
+      codiDate: today,
+    });
     if (codiLogToday.length > 0) {
       // console.log(codiLogToday[0]);
       res.json(codiLogToday[0]);
@@ -209,9 +209,9 @@ app.get('/codiLogToday/:today/:userid', async (req, res) => {
 });
 
 // codiLogSimilar Get
-app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid', async (req, res) => {
+app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid", async (req, res) => {
   const { maxTemp, minTemp, sky, userid } = req.params;
-  console.log('-------------요청 성공 >> ', maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음 nayoung
+  console.log("-------------요청 성공 >> ", maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음 nayoung
   // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
   //1순위 : 기온차 조건 ok + sky 똑같음 //2순위 : 기온차 조건 ok   //부합하는 기록이 여러개라면 : 랜덤
   try {
@@ -221,39 +221,46 @@ app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid', async (req, res) => {
       minTemp: { $gte: parseInt(minTemp) - 2, $lte: parseInt(minTemp) + 2 },
     });
 
-    let setListCheckSimilar = []; // 
+    let setListCheckSimilar = []; //
     if (ListSimilarTemp.length > 0) {
-      const ListSimilarSky = ListSimilarTemp.filter(item => item.sky === sky);
+      const ListSimilarSky = ListSimilarTemp.filter((item) => item.sky === sky);
       if (ListSimilarSky.length !== 0) {
         setListCheckSimilar = [...ListSimilarSky];
-      } else { setListCheckSimilar = [...ListSimilarTemp] }
+      } else {
+        setListCheckSimilar = [...ListSimilarTemp];
+      }
 
-      console.log('---조건 부합한 기록 갯수 ---', setListCheckSimilar.length);
-      const randomIndex = Math.floor(Math.random() * setListCheckSimilar.length);    // 0부터 (listLength-1) 사이의 랜덤한 정수 얻기
-      console.log('@@@랜덤숫자, 해당 기록@@@@', randomIndex, setListCheckSimilar[randomIndex]);
+      console.log("---조건 부합한 기록 갯수 ---", setListCheckSimilar.length);
+      const randomIndex = Math.floor(
+        Math.random() * setListCheckSimilar.length
+      ); // 0부터 (listLength-1) 사이의 랜덤한 정수 얻기
+      console.log(
+        "@@@랜덤숫자, 해당 기록@@@@",
+        randomIndex,
+        setListCheckSimilar[randomIndex]
+      );
       res.json(setListCheckSimilar[randomIndex]);
-
     } else {
-      res.json([]);  // 해당 데이터가 없을 때 빈 배열을 반환
-      console.log('!!!!조간 부합한 기록이 없다!!!!');
+      res.json([]); // 해당 데이터가 없을 때 빈 배열을 반환
+      console.log("!!!!조간 부합한 기록이 없다!!!!");
     }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
   }
-
-})
-
+});
 
 // codiLogList GET
-app.get('/codiLogList/:userid', async (req, res) => {
+app.get("/codiLogList/:userid", async (req, res) => {
   // console.log("codiLogList 요청 옴");
   // res.send("codiLogList 잘 돌아감");
   const { userid } = req.params;
 
   // 로그인 되면 userid -> 로그인한 사람 id로 바꾸기
   try {
-    const codiLogList = await CodiLogModel.find({ userid: userid }).sort({ codiDate: -1 });
+    const codiLogList = await CodiLogModel.find({ userid: userid }).sort({
+      codiDate: -1,
+    });
     // console.log(codiLogList);
     res.json(codiLogList); // 생성된 codiLogList를 JSON 형태로 클라이언트에 응답으로 보냄
   } catch (error) {
@@ -261,7 +268,6 @@ app.get('/codiLogList/:userid', async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
 
 // multer 설정
 const storage = multer.diskStorage({
@@ -276,7 +282,8 @@ const upload = multer({ storage: storage });
 const CodiLogModel = require("./models/codiLog");
 
 app.post("/codiWrite", upload.single("file"), async (req, res) => {
-  const { memo, tag, address, maxTemp, minTemp, codiDate, sky, userid } = req.body;
+  const { memo, tag, address, maxTemp, minTemp, codiDate, sky, userid } =
+    req.body;
   const { filename, path } = req.file;
   // console.log("codiWrite 잘 돌아감", memo, tag, filename, path);
 
@@ -301,7 +308,7 @@ app.post("/codiWrite", upload.single("file"), async (req, res) => {
 });
 
 //코디기록 수정페이지 codiEdit PUT
-app.put('/codiEdit/:id', upload.single("file"), async (req, res) => {
+app.put("/codiEdit/:id", upload.single("file"), async (req, res) => {
   const { id } = req.params;
   const { memo, tag } = req.body;
   const { filename, path } = req.file;
@@ -309,19 +316,21 @@ app.put('/codiEdit/:id', upload.single("file"), async (req, res) => {
 
   try {
     await CodiLogModel.findByIdAndUpdate(id, {
-      memo, tag, image: path,
+      memo,
+      tag,
+      image: path,
     });
     res.status(200).json({ message: "CodiEdit successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "codiEdit - Server Error" });
   }
-})
+});
 
 // 코디기록 삭제 codiDelete DELETE
 app.delete("/codiDelete/:id", async (req, res) => {
   const { id } = req.params;
-  console.log('>>codiDelete>>', id);
+  console.log(">>codiDelete>>", id);
 
   try {
     const codiLog = await CodiLogModel.findById(id);
@@ -329,12 +338,13 @@ app.delete("/codiDelete/:id", async (req, res) => {
 
     await CodiLogModel.findByIdAndDelete(id);
 
-    fs.unlink(imgPath, (err) => {//uploads/codiLog 폴더의 이미지파일도 삭제되도록
+    fs.unlink(imgPath, (err) => {
+      //uploads/codiLog 폴더의 이미지파일도 삭제되도록
       if (err) {
-        console.error('파일 삭제 실패:', err);
+        console.error("파일 삭제 실패:", err);
         return;
       }
-      console.log('파일이 성공적으로 삭제되었습니다.');
+      console.log("파일이 성공적으로 삭제되었습니다.");
     });
 
     res.status(200).json({ message: "codiDelete successfully" });

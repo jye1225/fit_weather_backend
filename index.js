@@ -142,11 +142,9 @@ app.get('/codiLogToday/:today/:userid', async (req, res) => {
 // codiLogSimilar Get
 app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid', async (req, res) => {
   const { maxTemp, minTemp, sky, userid } = req.params;
-  console.log('-------------요청 성공 >> ', maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음
-  // 비슷한 날씨 : 기온 차이 3도 미만 으로 설정
-  //1순위 : 기온차 조건 ok + sky 똑같음
-  //2순위 : 기온차 조건 ok 
-  //부합하는 기록이 여러개라면 : 랜덤?
+  console.log('-------------요청 성공 >> ', maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음 nayoung
+  // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
+  //1순위 : 기온차 조건 ok + sky 똑같음 //2순위 : 기온차 조건 ok   //부합하는 기록이 여러개라면 : 랜덤
   try {
     const ListSimilarTemp = await CodiLogModel.find({
       userid: userid,
@@ -177,6 +175,7 @@ app.get('/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid', async (req, res) => {
 
 })
 
+
 // codiLogList GET
 app.get('/codiLogList/:userid', async (req, res) => {
   // console.log("codiLogList 요청 옴");
@@ -185,7 +184,7 @@ app.get('/codiLogList/:userid', async (req, res) => {
 
   // 로그인 되면 userid -> 로그인한 사람 id로 바꾸기
   try {
-    const codiLogList = await CodiLogModel.find({ userid: userid }).sort({ codiDate: 1 });
+    const codiLogList = await CodiLogModel.find({ userid: userid }).sort({ codiDate: -1 });
     // console.log(codiLogList);
     res.json(codiLogList); // 생성된 codiLogList를 JSON 형태로 클라이언트에 응답으로 보냄
   } catch (error) {

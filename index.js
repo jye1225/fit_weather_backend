@@ -1,13 +1,17 @@
 const https = require("https");
 const cors = require("cors");
-const authRoutes = require("./middleware/auth");
 const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 require("dotenv").config();
+const axios = require("axios");
+const mongoose = require("mongoose");
+const express = require("express");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 
 // express
-const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -26,12 +30,10 @@ app.use(
   })
 );
 
-// ------- 예은 설정값 --------
-
 app.use(express.json());
+app.use(cookieParser());
 
-// mongoDB 연결
-const mongoose = require("mongoose");
+// MongoDB 연결
 const mongoURI = process.env.MONGODB_URI;
 mongoose
   .connect(mongoURI, {
@@ -43,14 +45,8 @@ mongoose
 
 const User = require("./models/User"); // User 모델 생성
 
-const bcrypt = require("bcryptjs");
 const salt = bcrypt.genSaltSync(10);
-
-const jwt = require("jsonwebtoken");
-const jwtSecret = "qwerasdf"; // 환경변수로 처리
-
-const cookieParser = require("cookie-parser");
-app.use(cookieParser());
+const jwtSecret = process.env.JWT_SECRET; // 환경변수로 처리
 
 // 회원가입 기능
 app.post("/register", async (req, res) => {
@@ -73,55 +69,108 @@ app.post("/register", async (req, res) => {
 // 로그인 기능
 app.post("/login", async (req, res) => {
   const { userid, password } = req.body;
-  const userDoc = await User.findOne({ userid });
+  try {
+    const userDoc = await User.findOne({ userid });
 
-  if (!userDoc) {
-    res.json({ message: "nouser" });
-    return;
-  }
-  console.log(userDoc);
+    if (!userDoc) {
+      return res.status(400).json({ message: "User not found" });
+    }
 
-  // jwt.sign( { token에 들어갈 데이터 }, 비밀키, { token의 유효기간(안써도됨) }, ( err, token )=>{} )
-  const passOK = bcrypt.compareSync(password, userDoc.password); // 두 정보가 맞으면 true, 틀리면 false
-  if (passOK) {
-    jwt.sign(
-      { userid, username: userDoc.username, id: userDoc._id },
-      jwtSecret,
-      {},
-      (err, token) => {
-        if (err) throw err;
-        console.log(token);
-        res.cookie("token", token).json({
-          token,
+    const passOK = await bcrypt.compare(password, userDoc.password);
+    if (passOK) {
+      const token = jwt.sign(
+        { userid, username: userDoc.username, id: userDoc._id },
+        jwtSecret,
+        { expiresIn: "1d" }
+      );
+
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+        })
+        .json({
           id: userDoc._id,
           username: userDoc.username,
-          userid,
-          username: userDoc.username,
+          userid: userDoc.userid,
         });
-      }
-    );
-  } else {
-    res.json({ message: "failed" });
+    } else {
+      res.status(400).json({ message: "Invalid password" });
+    }
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// 이거 삭제하면 로그아웃 안됨
+// 로그아웃 기능
 app.post("/logout", (req, res) => {
-  res.cookie("token", "").json();
+  res.clearCookie("token").json({ message: "Logged out successfully" });
 });
 
-// 카카오로그인 때문에 ^_^
-let users = [{ id: 1, name: "John Doe", email: "john@example.com" }]; // 예시 사용자 데이터
+// 카카오 로그인
+app.get("/kakao-login", async (req, res) => {
+  const { code } = req.query;
+  console.log("Received Kakao code:", code);
+  try {
+    const tokenResponse = await axios.post(
+      "https://kauth.kakao.com/oauth/token",
+      null,
+      {
+        params: {
+          grant_type: "authorization_code",
+          client_id: process.env.KAKAO_CLIENT_ID,
+          redirect_uri: process.env.KAKAO_REDIRECT_URI,
+          code,
+        },
+      }
+    );
 
-app.get("/user-info", (req, res) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+    const { access_token } = tokenResponse.data;
 
-  if (token === "exampletoken") {
-    // 예시 토큰 검증
-    res.json({ user: users[0] });
-  } else {
-    res.status(401).json({ error: "Unauthorized" });
+    const userResponse = await axios.get("https://kapi.kakao.com/v2/user/me", {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+
+    const { id, kakao_account } = userResponse.data;
+    const { email, profile } = kakao_account;
+    const { nickname } = profile;
+
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({
+        userid: email,
+        username: nickname,
+        email,
+        password: await bcrypt.hash(String(id), 10),
+      });
+    }
+
+    const token = jwt.sign({ userid: user.userid, id: user._id }, jwtSecret, {
+      expiresIn: "1d",
+    });
+
+    res
+      .cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+      })
+      .redirect(
+        `${
+          process.env.FRONTEND_URL
+        }/complete-profile?loginSuccess=true&userId=${
+          user._id
+        }&username=${encodeURIComponent(user.username)}`
+      );
+  } catch (error) {
+    console.error("카카오 로그인 에러:", error);
+    res.redirect(
+      `${
+        process.env.FRONTEND_URL
+      }/complete-profile?loginSuccess=false&error=${encodeURIComponent(
+        "카카오 로그인 실패"
+      )}`
+    );
   }
 });
 

@@ -436,6 +436,13 @@ app.use("/comments", commentRouter);
 
 // //// <<<<<<< 지선 부분 끝
 
+// ---- 마이페이지 - 내 커뮤니티 활동 - 시작 -------
+
+const CommuCollRouter = require('./routes/commuColl.js')
+app.use('/mypage', CommuCollRouter)
+
+// ---- 마이페이지 - 내 커뮤니티 활동 - 끝 ---------
+
 // 기본 루트 경로(/)에 대한 GET 요청 핸들러
 app.get("/", (req, res) => {
   res.send("app.get 잘 돌아감");

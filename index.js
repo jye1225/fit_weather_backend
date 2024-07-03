@@ -90,7 +90,8 @@ app.post("/login", async (req, res) => {
           username: userDoc.username,
           userid,
         });
-      });
+      }
+    );
   } else {
     res.json({ message: "failed" });
   }
@@ -438,8 +439,8 @@ app.use("/comments", commentRouter);
 
 // ---- 마이페이지 - 내 커뮤니티 활동 - 시작 -------
 
-const CommuCollRouter = require('./routes/commuColl.js')
-app.use('/mypage', CommuCollRouter)
+const CommuCollRouter = require("./routes/commuColl.js");
+app.use("/mypage", CommuCollRouter);
 
 // ---- 마이페이지 - 내 커뮤니티 활동 - 끝 ---------
 
@@ -454,12 +455,12 @@ app.get("/", (req, res) => {
 // });
 
 // HTTPS 서버 생성 및 리스닝 - 맥
-const httpsServer = https.createServer(credentials, app);
-httpsServer.listen(PORT, () => {
-  console.log(`${PORT}번 포트 돌아가는 즁~!`);
-});
-
-// HTTP 서버 - 윈도우
-// app.listen(PORT, () => {
+// const httpsServer = https.createServer(credentials, app);
+// httpsServer.listen(PORT, () => {
 //   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 // });
+
+// HTTP 서버 - 윈도우
+app.listen(PORT, () => {
+  console.log(`${PORT}번 포트 돌아가는 즁~!`);
+});

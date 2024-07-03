@@ -42,7 +42,7 @@ router.get("/getAllPosts", async (req, res) => {
     // const limit = page === 1 ? 15 : 5;  // 첫 페이지는 5개, 나머지는 5개
     // const skip = page === 1 ? 0 : 5 + (page - 2) * 5;  // 첫 페이지 이후 스킵 계산
 
-    const postsList = await Post.find().sort({ createdAt: -1 });
+    const postsList = await Post.find().sort({ createdAt: -1 })
     // .skip(skip).limit(limit)
     const total = await Post.countDocuments();
 
@@ -86,7 +86,7 @@ router.post("/writePost", postImgUp.single("file"), async (req, res) => {
       res.json(postDoc);
     } catch (err) {
       console.error(err);
-      res.status(500).json({ err: "글쓰기 서버 에러" });
+      res.status(500).json("글쓰기 서버 에러", { err });
     }
   });
 });

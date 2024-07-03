@@ -90,7 +90,8 @@ app.post("/login", async (req, res) => {
           username: userDoc.username,
           userid,
         });
-      });
+      }
+    );
   } else {
     res.json({ message: "failed" });
   }
@@ -438,8 +439,8 @@ async function callCodiAI(codiPrompt) {
 
 // ---- 마이페이지 - 내 커뮤니티 활동 - 시작 -------
 
-const CommuCollRouter = require('./routes/commuColl.js')
-app.use('/mypage', CommuCollRouter)
+const CommuCollRouter = require("./routes/commuColl.js");
+app.use("/mypage", CommuCollRouter);
 
 // ---- 마이페이지 - 내 커뮤니티 활동 - 끝 ---------
 

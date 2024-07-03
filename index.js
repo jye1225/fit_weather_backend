@@ -97,6 +97,26 @@ app.post("/login", async (req, res) => {
   }
 });
 
+app.post("/kakao-register", async (req, res) => {
+  const { userid, username, profile_image } = req.body;
+  console.log(req.body);
+  console.log('카카오로그인 유저정보', userid, username);
+
+  try {
+    const userDoc = await User.create({
+      userid,
+      username,
+      password: String(Math.floor(Math.random() * 1000000)),
+      profile_image,
+    });
+    console.log('문서', userDoc);
+    res.json(userDoc);
+  } catch (e) {
+    console.error('카카오로그인 에러', e);
+    res.status(400).json({ message: "failed", error: e.message });
+  }
+});
+
 // 이거 삭제하면 로그아웃 안됨
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json();
@@ -132,7 +152,7 @@ app.get("/codiLogToday/:today/:userid", async (req, res) => {
       res.json(codiLogToday[0]);
     } else {
       console.log("해당날짜 기록 없음");
-      res.json([]); // 해당 날짜에 대한 데이터가 없을 때 빈 배열을 반환
+      res.json(null); // 해당 날짜에 대한 데이터가 없을 때
     }
   } catch (error) {
     console.error(error);
@@ -141,8 +161,8 @@ app.get("/codiLogToday/:today/:userid", async (req, res) => {
 });
 
 // codiLogSimilar Get
-app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid", async (req, res) => {
-  const { maxTemp, minTemp, sky, userid } = req.params;
+app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today", async (req, res) => {
+  const { maxTemp, minTemp, sky, userid, today } = req.params;
   console.log("-------------요청 성공 >> ", maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음 nayoung
   // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
   //1순위 : 기온차 조건 ok + sky 똑같음 //2순위 : 기온차 조건 ok   //부합하는 기록이 여러개라면 : 랜덤
@@ -151,6 +171,7 @@ app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid", async (req, res) => {
       userid: userid,
       maxTemp: { $gte: parseInt(maxTemp) - 2, $lte: parseInt(maxTemp) + 2 },
       minTemp: { $gte: parseInt(minTemp) - 2, $lte: parseInt(minTemp) + 2 },
+      codiDate: { $ne: today },
     });
 
     let setListCheckSimilar = []; //
@@ -173,7 +194,7 @@ app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid", async (req, res) => {
       );
       res.json(setListCheckSimilar[randomIndex]);
     } else {
-      res.json([]); // 해당 데이터가 없을 때 빈 배열을 반환
+      res.json(null); // 해당하는 데이터가 없을 때
       console.log("!!!!조간 부합한 기록이 없다!!!!");
     }
   } catch (error) {

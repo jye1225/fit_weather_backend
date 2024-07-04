@@ -37,18 +37,40 @@ router.get("/postDetail/:postId", async (req, res) => {
 // ---- 글 가져오기 get요청
 router.get("/getAllPosts", async (req, res) => {
   try {
-    //무한스크롤용인데...
-    // const page = parseInt(req.query.page) || 1;
-    // const limit = page === 1 ? 15 : 5;  // 첫 페이지는 5개, 나머지는 5개
-    // const skip = page === 1 ? 0 : 5 + (page - 2) * 5;  // 첫 페이지 이후 스킵 계산
+    const page = parseInt(req.query.page) || 1;// 클라이언트에서 전달한 페이지 번호
+    const { filter } = req.query
+    console.log('프론트에서 전달', page, filter);
 
-    const postsList = await Post.find().sort({ createdAt: -1 })
-    // .skip(skip).limit(limit)
-    const total = await Post.countDocuments();
+    const firstPageLimit = 15; // 첫 페이지 포스트 수
+    const restPageLimit = 10; // 나머지 페이지 포스트 수
+
+    let limit, skip
+    if (page === 1) {
+      limit = firstPageLimit
+      skip = 0
+    } else {
+      limit = restPageLimit
+      skip = firstPageLimit + (page - 2) * restPageLimit
+    }
+
+    let query = {}
+    if (filter === 'all') {
+      query.category = { $in: ['coordi', 'weather'] };
+      console.log(query);
+    } else {
+      query.category = filter;
+      console.log(query);
+    }
+
+    const postsList = await Post.find(query).sort({ createdAt: -1 })
+      .skip(skip).limit(limit)
+
+    const totalPosts = await Post.countDocuments(query);
+    const hasMore = totalPosts > skip + postsList.length
 
     res.json({
       postsList,
-      total,
+      hasMore
     });
   } catch (err) {
     console.error(err);

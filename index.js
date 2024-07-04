@@ -171,7 +171,7 @@ app.get("/codiLogToday/:today/:userid", async (req, res) => {
       // console.log(codiLogToday[0]);
       res.json(codiLogToday[0]);
     } else {
-      console.log("해당날짜 기록 없음");
+      // console.log("해당날짜 기록 없음");
       res.json(null); // 해당 날짜에 대한 데이터가 없을 때
     }
   } catch (error) {
@@ -183,7 +183,7 @@ app.get("/codiLogToday/:today/:userid", async (req, res) => {
 // codiLogSimilar Get
 app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today", async (req, res) => {
   const { maxTemp, minTemp, sky, userid, today } = req.params;
-  console.log("-------------요청 성공 >> ", maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음 nayoung
+  // console.log("-------------요청 성공 >> ", maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음 nayoung
   // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
   //1순위 : 기온차 조건 ok + sky 똑같음 //2순위 : 기온차 조건 ok   //부합하는 기록이 여러개라면 : 랜덤
   try {
@@ -200,45 +200,48 @@ app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today", async (req, res
       if (ListSimilarSky.length !== 0) {
         setListCheckSimilar = [...ListSimilarSky];
       } else {
-         setListCheckSimilar = [...ListSimilarTemp];
+        setListCheckSimilar = [...ListSimilarTemp];
       }
 
-      // 혹시 몰라서 남김 -- 07.04 AM 09:44
-//     } catch (error) {
-//       console.error(error);
-//       res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
-
-
-
-      console.log("---조건 부합한 기록 갯수 ---", setListCheckSimilar.length);
+      // console.log("---조건 부합한 기록 갯수 ---", setListCheckSimilar.length);
       const randomIndex = Math.floor(
         Math.random() * setListCheckSimilar.length
       ); // 0부터 (listLength-1) 사이의 랜덤한 정수 얻기
-      console.log(
-        "@@@랜덤숫자, 해당 기록@@@@",
-        randomIndex,
-        setListCheckSimilar[randomIndex]
-      );
+      // console.log(
+      //   "@@@랜덤숫자, 해당 기록@@@@",
+      //   randomIndex,
+      //   setListCheckSimilar[randomIndex]
+      // );
       res.json(setListCheckSimilar[randomIndex]);
     } else {
       res.json(null); // 해당하는 데이터가 없을 때
       console.log("!!!!조간 부합한 기록이 없다!!!!");
     }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
   }
-);
-
+});
 // codiLogList GET
 app.get("/codiLogList/:userid", async (req, res) => {
-  // console.log("codiLogList 요청 옴");
-  // res.send("codiLogList 잘 돌아감");
+
+  console.log("codiLogList 요청 옴");
   const { userid } = req.params;
+  // 유효한 userid 확인
+  if (!userid) {
+    return res.status(400).json({ error: "Invalid user ID" });
+  }
+  const limit = parseInt(req.query.limit, 10) || 16; // 페이지당 가져올 데이터 수
+  const page = parseInt(req.query.page, 10) || 0; // 현재 페이지 번호
+  const skip = page * limit; // 건너뛸 데이터 수 계산
 
   // 로그인 되면 userid -> 로그인한 사람 id로 바꾸기
   try {
-    const codiLogList = await CodiLogModel.find({ userid: userid }).sort({
-      codiDate: -1,
-    });
-    // console.log(codiLogList);
+    const codiLogList = await CodiLogModel.find({ userid: userid })
+      .sort({ codiDate: -1 }) // 최신순으로 정렬
+      .skip(skip) // 페이지네이션을 위한 건너뛰기
+      .limit(limit); // 페이지당 데이터 수 제한
+    console.log(codiLogList.length);
     res.json(codiLogList); // 생성된 codiLogList를 JSON 형태로 클라이언트에 응답으로 보냄
   } catch (error) {
     console.error(error);

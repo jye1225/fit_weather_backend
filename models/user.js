@@ -4,8 +4,10 @@ const { Schema, model } = mongoose;
 const UserSchema = new Schema({
   userid: { type: String, required: true, unique: true },
   username: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  password: { type: String },
   gender: { type: String },
+  profile_image: { type: String },
+
   // email: { type: String, required: true, unique: true },
 });
 

@@ -438,6 +438,24 @@ async function callCodiAI(codiPrompt) {
 
 // //// <<<<<<< 지선 부분 끝
 
+
+app.post("/kakao-register", async (req, res) => {
+  const { userid, username, profile_image } = req.body;
+  console.log('kakao-register', req.body);
+
+  // try {
+  //   const userDoc = await User.create({
+  //     userid,
+  //     username,
+  //     profile_image,
+  //   });
+  //   res.json(userDoc);
+  // } catch (e) {
+  // res.status(400).json({ message: "failed", error: e.message });
+  // }
+});
+
+
 // ---- 마이페이지 - 내 커뮤니티 활동 - 시작 -------
 
 const CommuCollRouter = require("./routes/commuColl.js");

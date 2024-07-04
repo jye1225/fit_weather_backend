@@ -200,9 +200,14 @@ app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today", async (req, res
       if (ListSimilarSky.length !== 0) {
         setListCheckSimilar = [...ListSimilarSky];
       } else {
-        res.json(null); // 해당하는 데이터가 없을 때
-        console.log("!!!!조간 부합한 기록이 없다!!!!");
+         setListCheckSimilar = [...ListSimilarTemp];
       }
+
+      // 혹시 몰라서 남김 -- 07.04 AM 09:44
+//     } catch (error) {
+//       console.error(error);
+//       res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
+
 
 
       console.log("---조건 부합한 기록 갯수 ---", setListCheckSimilar.length);

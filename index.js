@@ -142,7 +142,7 @@ app.post("/logout", (req, res) => {
   res.cookie("token", "").json();
 });
 
-//// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
+/// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // codiLogDetail GET
@@ -477,6 +477,24 @@ async function callCodiAI(codiPrompt) {
 
 // //// <<<<<<< 지선 부분 끝
 
+
+app.post("/kakao-register", async (req, res) => {
+  const { userid, username, profile_image } = req.body;
+  console.log('kakao-register', req.body);
+
+  // try {
+  //   const userDoc = await User.create({
+  //     userid,
+  //     username,
+  //     profile_image,
+  //   });
+  //   res.json(userDoc);
+  // } catch (e) {
+  // res.status(400).json({ message: "failed", error: e.message });
+  // }
+});
+
+
 // ---- 마이페이지 - 내 커뮤니티 활동 - 시작 -------
 
 const CommuCollRouter = require("./routes/commuColl.js");
@@ -495,12 +513,12 @@ app.get("/", (req, res) => {
 // });
 
 // HTTPS 서버 생성 및 리스닝 - 맥
-// const httpsServer = https.createServer(credentials, app);
-// httpsServer.listen(PORT, () => {
-//   console.log(`${PORT}번 포트 돌아가는 즁~!`);
-// });
-
-// HTTP 서버 - 윈도우
-app.listen(PORT, () => {
+const httpsServer = https.createServer(credentials, app);
+httpsServer.listen(PORT, () => {
   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 });
+
+// // HTTP 서버 - 윈도우
+// app.listen(PORT, () => {
+//   console.log(`${PORT}번 포트 돌아가는 즁~!`);
+// });

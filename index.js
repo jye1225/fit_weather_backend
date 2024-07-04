@@ -46,6 +46,25 @@ const User = require("./models/User"); // User 모델 생성
 const salt = bcrypt.genSaltSync(10);
 const jwtSecret = process.env.JWT_SECRET; // 환경변수로 처리
 
+app.post("/kakao-register", async (req, res) => {
+  const { userid, username, profile_image } = req.body;
+  console.log(req.body);
+
+  try {
+    const userDoc = await User.create({
+      userid,
+      username,
+      password: String(Math.floor(Math.random() * 1000000)),
+      profile_image,
+    });
+    console.log("문서", userDoc);
+    res.json(userDoc);
+  } catch (e) {
+    console.error("카카오 로그인 에러", e);
+    res.status(400).json({ message: "failed", error: e.message });
+  }
+});
+
 // 회원가입 기능
 app.post("/register", async (req, res) => {
   const { userid, username, password, gender } = req.body;
@@ -67,6 +86,7 @@ app.post("/register", async (req, res) => {
 // 로그인 기능
 app.post("/login", async (req, res) => {
   const { userid, password } = req.body;
+  console.log("로그인 기능----", req.body);
   const userDoc = await User.findOne({ userid });
 
   if (!userDoc) {
@@ -180,8 +200,10 @@ app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today", async (req, res
       if (ListSimilarSky.length !== 0) {
         setListCheckSimilar = [...ListSimilarSky];
       } else {
-        setListCheckSimilar = [...ListSimilarTemp];
+        res.json(null); // 해당하는 데이터가 없을 때
+        console.log("!!!!조간 부합한 기록이 없다!!!!");
       }
+
 
       console.log("---조건 부합한 기록 갯수 ---", setListCheckSimilar.length);
       const randomIndex = Math.floor(
@@ -197,11 +219,8 @@ app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today", async (req, res
       res.json(null); // 해당하는 데이터가 없을 때
       console.log("!!!!조간 부합한 기록이 없다!!!!");
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
   }
-});
+);
 
 // codiLogList GET
 app.get("/codiLogList/:userid", async (req, res) => {

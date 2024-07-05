@@ -120,7 +120,7 @@ app.post("/login", async (req, res) => {
 app.post("/kakao-register", async (req, res) => {
   const { userid, username, profile_image } = req.body;
   console.log(req.body);
-  console.log('카카오로그인 유저정보', userid, username);
+  console.log("카카오로그인 유저정보", userid, username);
 
   try {
     const userDoc = await User.create({
@@ -129,10 +129,10 @@ app.post("/kakao-register", async (req, res) => {
       password: String(Math.floor(Math.random() * 1000000)),
       profile_image,
     });
-    console.log('문서', userDoc);
+    console.log("문서", userDoc);
     res.json(userDoc);
   } catch (e) {
-    console.error('카카오로그인 에러', e);
+    console.error("카카오로그인 에러", e);
     res.status(400).json({ message: "failed", error: e.message });
   }
 });
@@ -181,48 +181,49 @@ app.get("/codiLogToday/:today/:userid", async (req, res) => {
 });
 
 // codiLogSimilar Get
-app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today", async (req, res) => {
-  const { maxTemp, minTemp, sky, userid, today } = req.params;
-  console.log("-------------요청 성공 >> ", maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음 nayoung
-  // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
-  //1순위 : 기온차 조건 ok + sky 똑같음 //2순위 : 기온차 조건 ok   //부합하는 기록이 여러개라면 : 랜덤
-  try {
-    const ListSimilarTemp = await CodiLogModel.find({
-      userid: userid,
-      maxTemp: { $gte: parseInt(maxTemp) - 2, $lte: parseInt(maxTemp) + 2 },
-      minTemp: { $gte: parseInt(minTemp) - 2, $lte: parseInt(minTemp) + 2 },
-      codiDate: { $ne: today },
-    });
+app.get(
+  "/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today",
+  async (req, res) => {
+    const { maxTemp, minTemp, sky, userid, today } = req.params;
+    console.log("-------------요청 성공 >> ", maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음 nayoung
+    // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
+    //1순위 : 기온차 조건 ok + sky 똑같음 //2순위 : 기온차 조건 ok   //부합하는 기록이 여러개라면 : 랜덤
+    try {
+      const ListSimilarTemp = await CodiLogModel.find({
+        userid: userid,
+        maxTemp: { $gte: parseInt(maxTemp) - 2, $lte: parseInt(maxTemp) + 2 },
+        minTemp: { $gte: parseInt(minTemp) - 2, $lte: parseInt(minTemp) + 2 },
+        codiDate: { $ne: today },
+      });
 
-    let setListCheckSimilar = []; //
-    if (ListSimilarTemp.length > 0) {
-      const ListSimilarSky = ListSimilarTemp.filter((item) => item.sky === sky);
-      if (ListSimilarSky.length !== 0) {
-        setListCheckSimilar = [...ListSimilarSky];
+      let setListCheckSimilar = []; //
+      if (ListSimilarTemp.length > 0) {
+        const ListSimilarSky = ListSimilarTemp.filter(
+          (item) => item.sky === sky
+        );
+        if (ListSimilarSky.length !== 0) {
+          setListCheckSimilar = [...ListSimilarSky];
+        } else {
+          setListCheckSimilar = [...ListSimilarTemp];
+        }
+
+        console.log("---조건 부합한 기록 갯수 ---", setListCheckSimilar.length);
+        const randomIndex = Math.floor(
+          Math.random() * setListCheckSimilar.length
+        ); // 0부터 (listLength-1) 사이의 랜덤한 정수 얻기
+        console.log(
+          "@@@랜덤숫자, 해당 기록@@@@",
+          randomIndex,
+          setListCheckSimilar[randomIndex]
+        );
+        res.json(setListCheckSimilar[randomIndex]);
       } else {
-         setListCheckSimilar = [...ListSimilarTemp];
+        res.json(null); // 해당하는 데이터가 없을 때
+        console.log("!!!!조간 부합한 기록이 없다!!!!");
       }
-
-      // 혹시 몰라서 남김 -- 07.04 AM 09:44
-//     } catch (error) {
-//       console.error(error);
-//       res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
-
-
-
-      console.log("---조건 부합한 기록 갯수 ---", setListCheckSimilar.length);
-      const randomIndex = Math.floor(
-        Math.random() * setListCheckSimilar.length
-      ); // 0부터 (listLength-1) 사이의 랜덤한 정수 얻기
-      console.log(
-        "@@@랜덤숫자, 해당 기록@@@@",
-        randomIndex,
-        setListCheckSimilar[randomIndex]
-      );
-      res.json(setListCheckSimilar[randomIndex]);
-    } else {
-      res.json(null); // 해당하는 데이터가 없을 때
-      console.log("!!!!조간 부합한 기록이 없다!!!!");
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
     }
   }
 );
@@ -417,18 +418,27 @@ async function callChatGPT(prompt) {
 
 app.post("/codiTalkBox", async (req, res) => {
   console.log(req.body);
-  const { temperature, maxTemp, minTemp, popValue, dust, uv, clothes } =
-    req.body;
+  const {
+    temperature,
+    maxTemp,
+    minTemp,
+    popValue,
+    dust,
+    uv,
+    clothes,
+    selectedTemp,
+  } = req.body;
 
   // 날씨를 전달해주는 prompt
   let codiPrompt = "";
   codiPrompt += `오늘의 날씨를 제시해줄게. 현재기온 : ${temperature}°C, 최고기온/최저기온 : ${maxTemp}°C / ${minTemp}°C, 자외선 : ${uv}, 미세먼지 : ${dust}, 강수확률: ${popValue}%`;
-  codiPrompt += `오늘의 날씨에 적합한 코디를 알려줘`;
+  codiPrompt += `오늘의 날씨와 비교해서 ${selectedTemp}한 코디를 알려줘`;
   codiPrompt += `코디 정보는 3~4줄로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘`;
   codiPrompt += `사용자의 성별은 여자`;
   codiPrompt += `사용자의 옷장에는 ${clothes} 이런 옷들이 들어있어. 이 옷장에 있는 옷들로만 추천해줘`;
   codiPrompt += `tops에는 각각 긴팔, 반팔, 민소매 종류로 있고, bottoms에는 각각 긴바지, 반바지 종류가 있어`;
   codiPrompt += `주의할 점은 날씨에 관한 얘기는 하면 안 되고, 사용자의 성별이 여자일 경우에만 블라우스, 롱스커트, 미니스커트, 원피스를 제시해줘. 남자일 경우에는 저 코디를 제시받으면 안 돼`;
+  codiPrompt += `시원한 코디를 알려줄 때, 현재기온과 최고기온이 25°C 이상일 때는 outers 종류는 추천하면 안 돼`;
   codiPrompt += `자외선이 아무리 높아도 자외선 차단제 얘기는 하면 안 돼`;
   codiPrompt += `신발 얘기는 강수확률이 60% 이상일 때만 "비오니까 장화 신고 가!" 덧붙여줘. 그 외에는 신발 얘기는 하면 안 돼`;
 
@@ -482,10 +492,9 @@ async function callCodiAI(codiPrompt) {
 
 // //// <<<<<<< 지선 부분 끝
 
-
 app.post("/kakao-register", async (req, res) => {
   const { userid, username, profile_image } = req.body;
-  console.log('kakao-register', req.body);
+  console.log("kakao-register", req.body);
 
   // try {
   //   const userDoc = await User.create({
@@ -498,7 +507,6 @@ app.post("/kakao-register", async (req, res) => {
   // res.status(400).json({ message: "failed", error: e.message });
   // }
 });
-
 
 // ---- 마이페이지 - 내 커뮤니티 활동 - 시작 -------
 
@@ -518,12 +526,12 @@ app.get("/", (req, res) => {
 // });
 
 // HTTPS 서버 생성 및 리스닝 - 맥
-const httpsServer = https.createServer(credentials, app);
-httpsServer.listen(PORT, () => {
-  console.log(`${PORT}번 포트 돌아가는 즁~!`);
-});
-
-// // HTTP 서버 - 윈도우
-// app.listen(PORT, () => {
+// const httpsServer = https.createServer(credentials, app);
+// httpsServer.listen(PORT, () => {
 //   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 // });
+
+// // HTTP 서버 - 윈도우
+app.listen(PORT, () => {
+  console.log(`${PORT}번 포트 돌아가는 즁~!`);
+});

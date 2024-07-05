@@ -57,8 +57,7 @@ router.delete('/cmntDel/:postId/:cmntId', async (req, res) => {
   try {
     const cmntDel = await Comment.findByIdAndDelete(cmntId);
     const minusCmntCount = await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: -1 } });
-    res.json({ cmntDel, minusCmntCount, msg: 'ok' })
-
+    res.json({ cmntDel, minusCmntCount })
   } catch (error) {
     console.error('댓글 삭제 에러', error);
     res.status(500).json('댓글 삭제 서버 에러', error);

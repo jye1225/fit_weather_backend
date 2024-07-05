@@ -200,15 +200,8 @@ app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today", async (req, res
       if (ListSimilarSky.length !== 0) {
         setListCheckSimilar = [...ListSimilarSky];
       } else {
-         setListCheckSimilar = [...ListSimilarTemp];
+        setListCheckSimilar = [...ListSimilarTemp];
       }
-
-      // 혹시 몰라서 남김 -- 07.04 AM 09:44
-//     } catch (error) {
-//       console.error(error);
-//       res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
-
-
 
       console.log("---조건 부합한 기록 갯수 ---", setListCheckSimilar.length);
       const randomIndex = Math.floor(
@@ -224,8 +217,11 @@ app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today", async (req, res
       res.json(null); // 해당하는 데이터가 없을 때
       console.log("!!!!조간 부합한 기록이 없다!!!!");
     }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
   }
-);
+});
 
 // codiLogList GET
 app.get("/codiLogList/:userid", async (req, res) => {
@@ -518,12 +514,12 @@ app.get("/", (req, res) => {
 // });
 
 // HTTPS 서버 생성 및 리스닝 - 맥
-const httpsServer = https.createServer(credentials, app);
-httpsServer.listen(PORT, () => {
-  console.log(`${PORT}번 포트 돌아가는 즁~!`);
-});
-
-// // HTTP 서버 - 윈도우
-// app.listen(PORT, () => {
+// const httpsServer = https.createServer(credentials, app);
+// httpsServer.listen(PORT, () => {
 //   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 // });
+
+// // HTTP 서버 - 윈도우
+app.listen(PORT, () => {
+  console.log(`${PORT}번 포트 돌아가는 즁~!`);
+});

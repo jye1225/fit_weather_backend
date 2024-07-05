@@ -225,8 +225,7 @@ app.get(
       console.error(error);
       res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
     }
-  }
-);
+});
 
 // codiLogList GET
 app.get("/codiLogList/:userid", async (req, res) => {

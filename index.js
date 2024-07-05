@@ -339,7 +339,7 @@ app.delete("/codiDelete/:id", async (req, res) => {
 // --------------커뮤니티 부분 시작--------------------------
 
 const postRouter = require("./routes/post.js");
-const commentRouter = require("./routes/comment.js");
+const commentRouter = require("./routes/comment.js")(User);
 app.use("/posts", postRouter);
 app.use("/comments", commentRouter);
 

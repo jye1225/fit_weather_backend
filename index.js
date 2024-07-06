@@ -232,7 +232,7 @@ app.get("/codiLogList/:userid", async (req, res) => {
   if (!userid) {
     return res.status(400).json({ error: "Invalid user ID" });
   }
-  const limit = parseInt(req.query.limit, 10) || 16; // 페이지당 가져올 데이터 수
+  const limit = parseInt(req.query.limit, 10) || 32; // 페이지당 가져올 데이터 수
   const page = parseInt(req.query.page, 10) || 0; // 현재 페이지 번호
   const skip = page * limit; // 건너뛸 데이터 수 계산
 
@@ -529,12 +529,12 @@ app.get("/", (req, res) => {
 // });
 
 // HTTPS 서버 생성 및 리스닝 - 맥
-// const httpsServer = https.createServer(credentials, app);
-// httpsServer.listen(PORT, () => {
-//   console.log(`${PORT}번 포트 돌아가는 즁~!`);
-// });
-
-// // HTTP 서버 - 윈도우
-app.listen(PORT, () => {
+const httpsServer = https.createServer(credentials, app);
+httpsServer.listen(PORT, () => {
   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 });
+
+// // HTTP 서버 - 윈도우
+// app.listen(PORT, () => {
+//   console.log(`${PORT}번 포트 돌아가는 즁~!`);
+// });

@@ -2,10 +2,6 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
-const jwt = require("jsonwebtoken");
-
-// 웹토큰 시크릿 키
-const jwtSecret = process.env.JWT_SECRET;
 
 // 포스트 이미지 저장 경로 multer 설정
 const postImgUpload = multer.diskStorage({
@@ -82,35 +78,32 @@ router.get("/getAllPosts", async (req, res) => {
 router.post("/writePost", postImgUp.single("file"), async (req, res) => {
   const { postCate, onReview, title, content, region } = req.body;
   const path = req.file ? req.file.path : null;
+  const { userId, username } = req.query
   console.log("글쓰기", postCate, region, onReview, title, content);
   console.log("이미지 경로", path);
+  console.log('글쓴이', userId, username);
 
-  const { token } = req.cookies;
-  jwt.verify(token, jwtSecret, {}, async (err, userInfo) => {
-    if (err) throw err;
-    console.log("유저정보", userInfo.userid, "/", userInfo.username);
-    try {
-      const postDoc = await Post.create({
-        userId: userInfo.userid,
-        username: userInfo.username,
-        category: postCate,
-        title,
-        content,
-        image: path,
-        region,
-        likeCount: 0,
-        commentsCount: 0,
-        coordiReview: onReview,
-        coordiGood: 0,
-        coordiSoso: 0,
-        coordiBad: 0,
-      });
-      res.json(postDoc);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json("글쓰기 서버 에러", { err });
-    }
-  });
+  try {
+    const postDoc = await Post.create({
+      userId,
+      username,
+      category: postCate,
+      title,
+      content,
+      image: path,
+      region,
+      likeCount: 0,
+      commentsCount: 0,
+      coordiReview: onReview,
+      coordiGood: 0,
+      coordiSoso: 0,
+      coordiBad: 0,
+    });
+    res.json(postDoc);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json("글쓰기 서버 에러", { err });
+  }
 });
 
 // ---- 좋아요 클릭

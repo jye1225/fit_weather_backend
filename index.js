@@ -14,7 +14,6 @@ const cookieParser = require("cookie-parser");
 // express
 const app = express();
 const PORT = 8080;
-// const PORT = process.env.PORT || 8080;
 
 // SSL/TLS 인증서 파일 경로 설정
 const privateKey = fs.readFileSync("certs/cert.key", "utf8");
@@ -27,7 +26,7 @@ app.use(
     credentials: true,
     origin: true,
     methods: ["GET", "POST", "DELETE", "PUT"],
-    allowedHeaders: ["Content-Type"],
+    allowedHeaders: ["Content-Type"], // Authorization 헤더를 사용하지 않음
   })
 );
 
@@ -46,6 +45,19 @@ const User = require("./models/User"); // User 모델 생성
 const salt = bcrypt.genSaltSync(10);
 const jwtSecret = process.env.JWT_SECRET; // 환경변수로 처리
 
+// JWT 토큰을 검증하는 미들웨어
+const authenticateToken = (req, res, next) => {
+  const token = req.query.token; // 쿼리 파라미터에서 토큰을 가져옴
+  if (token == null) return res.sendStatus(401);
+
+  jwt.verify(token, jwtSecret, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+};
+
+// 카카오 회원가입 기능
 app.post("/kakao-register", async (req, res) => {
   const { userid, username, profile_image } = req.body;
   console.log(req.body);
@@ -94,8 +106,7 @@ app.post("/login", async (req, res) => {
     return;
   }
 
-  // jwt.sign( { token에 들어갈 데이터 }, 비밀키, { token의 유효기간(안써도됨) }, ( err, token )=>{} )
-  const passOK = bcrypt.compareSync(password, userDoc.password); // 두 정보가 맞으면 true, 틀리면 false
+  const passOK = bcrypt.compareSync(password, userDoc.password);
   if (passOK) {
     jwt.sign(
       { userid, username: userDoc.username, id: userDoc._id },
@@ -117,29 +128,31 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post("/kakao-register", async (req, res) => {
-  const { userid, username, profile_image } = req.body;
-  console.log(req.body);
-  console.log("카카오로그인 유저정보", userid, username);
-
-  try {
-    const userDoc = await User.create({
-      userid,
-      username,
-      password: String(Math.floor(Math.random() * 1000000)),
-      profile_image,
-    });
-    console.log("문서", userDoc);
-    res.json(userDoc);
-  } catch (e) {
-    console.error("카카오로그인 에러", e);
-    res.status(400).json({ message: "failed", error: e.message });
-  }
-});
-
-// 이거 삭제하면 로그아웃 안됨
+// 로그아웃 기능
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json();
+});
+
+// 현재 로그인된 사용자의 ID 가져오기
+app.get("/getUserid", authenticateToken, (req, res) => {
+  res.json({ userid: req.user.userid });
+});
+
+// 사용자 정보 업데이트
+app.post("/updateUserInfo", authenticateToken, async (req, res) => {
+  const { password, gender } = req.body;
+
+  try {
+    const hashedPassword = bcrypt.hashSync(password, salt);
+    await User.findByIdAndUpdate(req.user.id, {
+      password: hashedPassword,
+      gender,
+    });
+    res.json({ message: "User information updated successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
 /// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
@@ -181,51 +194,55 @@ app.get("/codiLogToday/:today/:userid", async (req, res) => {
 });
 
 // codiLogSimilar Get
-app.get("/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today", async (req, res) => {
-  const { maxTemp, minTemp, sky, userid, today } = req.params;
-  // console.log("-------------요청 성공 >> ", maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음 nayoung
-  // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
-  //1순위 : 기온차 조건 ok + sky 똑같음 //2순위 : 기온차 조건 ok   //부합하는 기록이 여러개라면 : 랜덤
-  try {
-    const ListSimilarTemp = await CodiLogModel.find({
-      userid: userid,
-      maxTemp: { $gte: parseInt(maxTemp) - 2, $lte: parseInt(maxTemp) + 2 },
-      minTemp: { $gte: parseInt(minTemp) - 2, $lte: parseInt(minTemp) + 2 },
-      codiDate: { $ne: today },
-    });
+app.get(
+  "/codiLogSimilar/:maxTemp/:minTemp/:sky/:userid/:today",
+  async (req, res) => {
+    const { maxTemp, minTemp, sky, userid, today } = req.params;
+    // console.log("-------------요청 성공 >> ", maxTemp, minTemp, sky, userid); // 예 ) 31 21 구름많음 nayoung
+    // 비슷한 날씨 : 기온 차이 4도 미만 으로 설정
+    //1순위 : 기온차 조건 ok + sky 똑같음 //2순위 : 기온차 조건 ok   //부합하는 기록이 여러개라면 : 랜덤
+    try {
+      const ListSimilarTemp = await CodiLogModel.find({
+        userid: userid,
+        maxTemp: { $gte: parseInt(maxTemp) - 2, $lte: parseInt(maxTemp) + 2 },
+        minTemp: { $gte: parseInt(minTemp) - 2, $lte: parseInt(minTemp) + 2 },
+        codiDate: { $ne: today },
+      });
 
-    let setListCheckSimilar = []; //
-    if (ListSimilarTemp.length > 0) {
-      const ListSimilarSky = ListSimilarTemp.filter((item) => item.sky === sky);
-      if (ListSimilarSky.length !== 0) {
-        setListCheckSimilar = [...ListSimilarSky];
+      let setListCheckSimilar = []; //
+      if (ListSimilarTemp.length > 0) {
+        const ListSimilarSky = ListSimilarTemp.filter(
+          (item) => item.sky === sky
+        );
+        if (ListSimilarSky.length !== 0) {
+          setListCheckSimilar = [...ListSimilarSky];
+        } else {
+          setListCheckSimilar = [...ListSimilarTemp];
+        }
+
+        // console.log("---조건 부합한 기록 갯수 ---", setListCheckSimilar.length);
+        const randomIndex = Math.floor(
+          Math.random() * setListCheckSimilar.length
+        ); // 0부터 (listLength-1) 사이의 랜덤한 정수 얻기
+        // console.log(
+        //   "@@@랜덤숫자, 해당 기록@@@@",
+        //   randomIndex,
+        //   setListCheckSimilar[randomIndex]
+        // );
+        res.json(setListCheckSimilar[randomIndex]);
       } else {
-        setListCheckSimilar = [...ListSimilarTemp];
+        res.json(null); // 해당하는 데이터가 없을 때
+        console.log("!!!!조간 부합한 기록이 없다!!!!");
       }
-
-      // console.log("---조건 부합한 기록 갯수 ---", setListCheckSimilar.length);
-      const randomIndex = Math.floor(
-        Math.random() * setListCheckSimilar.length
-      ); // 0부터 (listLength-1) 사이의 랜덤한 정수 얻기
-      // console.log(
-      //   "@@@랜덤숫자, 해당 기록@@@@",
-      //   randomIndex,
-      //   setListCheckSimilar[randomIndex]
-      // );
-      res.json(setListCheckSimilar[randomIndex]);
-    } else {
-      res.json(null); // 해당하는 데이터가 없을 때
-      console.log("!!!!조간 부합한 기록이 없다!!!!");
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "codiLogSimilar : Internal Server Error" });
   }
-});
+);
 
 // codiLogList GET
 app.get("/codiLogList/:userid", async (req, res) => {
-
   console.log("codiLogList 요청 옴");
   const { userid } = req.params;
   // 유효한 userid 확인
@@ -494,22 +511,6 @@ async function callCodiAI(codiPrompt) {
 }
 
 // //// <<<<<<< 지선 부분 끝
-
-app.post("/kakao-register", async (req, res) => {
-  const { userid, username, profile_image } = req.body;
-  console.log("kakao-register", req.body);
-
-  // try {
-  //   const userDoc = await User.create({
-  //     userid,
-  //     username,
-  //     profile_image,
-  //   });
-  //   res.json(userDoc);
-  // } catch (e) {
-  // res.status(400).json({ message: "failed", error: e.message });
-  // }
-});
 
 // ---- 마이페이지 - 내 커뮤니티 활동 - 시작 -------
 

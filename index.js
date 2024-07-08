@@ -21,14 +21,24 @@ const certificate = fs.readFileSync("certs/cert.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
 // CORS 설정
+// app.use(
+//   cors({
+//     credentials: true,
+//     origin: true,
+//     methods: ["GET", "POST", "DELETE", "PUT"],
+//     allowedHeaders: ["Content-Type"], // Authorization 헤더를 사용하지 않음
+//   })
+// );
+
+// CORS 설정
 app.use(
   cors({
-    credentials: true,
-    origin: true,
-    methods: ["GET", "POST", "DELETE", "PUT"],
-    allowedHeaders: ["Content-Type"], // Authorization 헤더를 사용하지 않음
+    origin: 'https://hpe03fitweather.netlify.app', // 특정 Origin을 명시적으로 지정
+    methods: ["GET", "POST"], // 필요한 메서드만 설정
+    allowedHeaders: ["Content-Type"], // 필요한 헤더만 설정
   })
 );
+
 
 app.use(express.json());
 app.use(cookieParser());

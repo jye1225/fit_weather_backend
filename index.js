@@ -25,8 +25,9 @@ app.use(
   cors({
     credentials: true,
     origin: true,
-    methods: ["GET", "POST", "DELETE", "PUT"],
-    allowedHeaders: ["Content-Type"], // Authorization 헤더를 사용하지 않음
+    methods: ["GET", "POST", "DELETE"],
+    allowedHeaders: ["Content-Type"],
+    credentials: true,
   })
 );
 
@@ -43,9 +44,9 @@ mongoose
 const User = require("./models/User"); // User 모델 생성
 
 const salt = bcrypt.genSaltSync(10);
-const jwtSecret = process.env.JWT_SECRET; // 환경변수로 처리
+const jwtSecret = process.env.JWT_SECRET;
 
-// JWT 토큰을 검증하는 미들웨어
+// JWT 토큰을 검증하는 `authenticateToken` 미들웨어
 const authenticateToken = (req, res, next) => {
   const token = req.query.token; // 쿼리 파라미터에서 토큰을 가져옴
   if (token == null) return res.sendStatus(401);
@@ -57,7 +58,11 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// 카카오 회원가입 기능
+// 예은 부분 시작 ------------------------------------------
+
+// <회원가입>
+
+// 1. 카카오 회원가입 기능
 app.post("/kakao-register", async (req, res) => {
   const { userid, username, profile_image } = req.body;
   console.log(req.body);
@@ -77,7 +82,7 @@ app.post("/kakao-register", async (req, res) => {
   }
 });
 
-// 회원가입 기능
+// 2. 일반 회원가입 기능
 app.post("/register", async (req, res) => {
   const { userid, username, password, gender } = req.body;
   console.log(req.body);
@@ -94,8 +99,11 @@ app.post("/register", async (req, res) => {
     res.status(400).json({ message: "failed", error: e.message });
   }
 });
+//--------------------------------------------------
 
-// 로그인 기능
+// <로그인, 로그아웃>
+
+// 1. 로그인 기능
 app.post("/login", async (req, res) => {
   const { userid, password } = req.body;
   console.log("로그인 기능----", req.body);
@@ -128,17 +136,20 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// 로그아웃 기능
+// 2. 로그아웃 기능
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json();
 });
+//---------------------------------------------------
 
-// 현재 로그인된 사용자의 ID 가져오기
+// <개인정보 수정 페이지>
+
+// 1. 현재 로그인된 사용자의 ID 가져오기
 app.get("/getUserid", authenticateToken, (req, res) => {
   res.json({ userid: req.user.userid });
 });
 
-// 사용자 정보 업데이트
+// 2. 사용자 정보 업데이트
 app.post("/updateUserInfo", authenticateToken, async (req, res) => {
   const { password, gender } = req.body;
 
@@ -155,7 +166,20 @@ app.post("/updateUserInfo", authenticateToken, async (req, res) => {
   }
 });
 
-/// ~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~
+// 3. 회원 탈퇴
+app.delete("/deleteUser", authenticateToken, async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.user.id);
+    res.clearCookie("token"); //로그아웃 처리
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+//------------------------------------------------------------
+
+/// ~~~~~~~~~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~~~~~~~~
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // codiLogDetail GET
@@ -277,8 +301,6 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // codiWrite POST 요청 핸들러
-const CodiLogModel = require("./models/codiLog");
-
 app.post("/codiWrite", upload.single("file"), async (req, res) => {
   const { memo, tag, address, maxTemp, minTemp, codiDate, sky, userid } =
     req.body;

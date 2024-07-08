@@ -453,7 +453,7 @@ app.post("/codiTalkBox", async (req, res) => {
   let codiPrompt = "";
   codiPrompt += `오늘의 날씨를 제시해줄게. 현재기온 : ${temperature}°C, 최고기온/최저기온 : ${maxTemp}°C / ${minTemp}°C, 자외선 : ${uv}, 미세먼지 : ${dust}, 강수확률: ${popValue}%`;
   codiPrompt += `오늘의 날씨와 비교해서 ${selectedTemp}한 코디를 알려줘`;
-  codiPrompt += `코디 정보는 3~4줄로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘`;
+  codiPrompt += `코디 정보는 3줄 이내로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘`;
   codiPrompt += `사용자의 성별은 여자`;
   codiPrompt += `사용자의 옷장에는 ${clothes} 이런 옷들이 들어있어. 이 옷장에 있는 옷들을 조합해서 추천해줘`;
   codiPrompt += `tops에는 각각 긴팔, 반팔, 민소매 종류로 있고, bottoms에는 각각 긴바지, 반바지 종류가 있어`;
@@ -536,7 +536,7 @@ app.get("/", (req, res) => {
 //   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 // });
 
-// // HTTP 서버 - 윈도우
+// HTTP 서버 - 윈도우
 app.listen(PORT, () => {
   console.log(`${PORT}번 포트 돌아가는 즁~!`);
 });

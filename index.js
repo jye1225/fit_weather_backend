@@ -4,7 +4,6 @@ const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 require("dotenv").config();
-const axios = require("axios");
 const mongoose = require("mongoose");
 const express = require("express");
 const bcrypt = require("bcryptjs");
@@ -25,7 +24,7 @@ app.use(
   cors({
     credentials: true,
     origin: true,
-    methods: ["GET", "POST", "DELETE"],
+    methods: ["GET", "POST", "DELETE"], //탈퇴애서 DELETE 사용합니다!-예은
     allowedHeaders: ["Content-Type"],
     credentials: true,
   })
@@ -77,7 +76,7 @@ app.post("/kakao-register", async (req, res) => {
     console.log("문서", userDoc);
     res.json(userDoc);
   } catch (e) {
-    console.error("카카오 로그인 에러", e);
+    console.error("Kakao-Login-Error", e);
     res.status(400).json({ message: "failed", error: e.message });
   }
 });
@@ -106,7 +105,6 @@ app.post("/register", async (req, res) => {
 // 1. 로그인 기능
 app.post("/login", async (req, res) => {
   const { userid, password } = req.body;
-  console.log("로그인 기능----", req.body);
   const userDoc = await User.findOne({ userid });
 
   if (!userDoc) {
@@ -142,7 +140,7 @@ app.post("/logout", (req, res) => {
 });
 //---------------------------------------------------
 
-// <개인정보 수정 페이지>
+// <마이페이지 - 개인정보 수정 페이지>
 
 // 1. 현재 로그인된 사용자의 ID 가져오기
 app.get("/getUserid", authenticateToken, (req, res) => {
@@ -177,6 +175,77 @@ app.delete("/deleteUser", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+//------------------------------------------------------------
+
+// <마이페이지 - 메인페이지>
+
+// 1. 사용자 정보 가져오기
+app.get("/getUserInfo", authenticateToken, async (req, res) => {
+  try {
+    console.log("Authenticated user:", req.user); // 디버깅 로그
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const userInfo = {
+      userid: user.id,
+      username: user.username,
+      userprofile: user.userprofile || null,
+      shortBio: user.shortBio || null,
+    };
+    res.json(userInfo);
+  } catch (error) {
+    console.error("Error fetching user info:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// 2. 사용자 프로필 업데이트
+// app.post("/updateUserProfile", authenticateToken, async (req, res) => {
+//   try {
+//     const { username, shortBio, userprofile } = req.body;
+//     const updatedFields = { username, shortBio, userprofile };
+//     if (req.files && req.files.userprofile) {
+//       updatedFields.userprofile = req.files.userprofile[0].path;
+//     }
+//     const user = await User.findByIdAndUpdate(req.user.id, updatedFields, {
+//       new: true,
+//     });
+//     if (!user) return res.status(404).json({ message: "User not found" });
+//     res.json(user);
+//   } catch (error) {
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// });
+
+app.post("/updateUserProfile", authenticateToken, async (req, res) => {
+  try {
+    const { username, shortBio } = req.body;
+    const updatedFields = { username, shortBio };
+
+    if (req.files && req.files.userprofile) {
+      const userProfileFile = req.files.userprofile;
+      const uploadPath = path.join(
+        __dirname,
+        "uploads/codiLog",
+        `${Date.now()}${path.extname(userProfileFile.name)}`
+      );
+      await userProfileFile.mv(uploadPath);
+      updatedFields.userprofile = uploadPath; // userprofile 필드 업데이트
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, updatedFields, {
+      new: true,
+    });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 //------------------------------------------------------------
 
 /// ~~~~~~~~~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~~~~~~~~

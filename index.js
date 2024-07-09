@@ -9,6 +9,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const fileUpload = require("express-fileupload");
 
 // express
 const app = express();
@@ -32,6 +33,7 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(fileUpload());
 
 // MongoDB 연결
 const mongoURI = process.env.MONGODB_URI;
@@ -42,7 +44,6 @@ mongoose
 
 const User = require("./models/user"); // User 모델 생성
 const CodiLogModel = require("./models/codiLog.js");
-
 const salt = bcrypt.genSaltSync(10);
 const jwtSecret = process.env.JWT_SECRET;
 
@@ -107,6 +108,7 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
   const { userid, password } = req.body;
   const userDoc = await User.findOne({ userid });
+  console.log("유저문서", userDoc);
 
   if (!userDoc) {
     res.json({ message: "nouser" });
@@ -120,8 +122,9 @@ app.post("/login", async (req, res) => {
         userid,
         username: userDoc.username,
         id: userDoc._id,
-        // gender: userDoc.gender,
-      }, // gender 정보 추가
+        shortBio: userDoc.shortBio,
+        gender: userDoc.gender,
+      },
       jwtSecret,
       {},
       (err, token) => {
@@ -132,7 +135,8 @@ app.post("/login", async (req, res) => {
           id: userDoc._id,
           username: userDoc.username,
           userid,
-          // gender: userDoc.gender, // gender 정보 응답에 포함
+          shortBio: userDoc.shortBio,
+          gender: userDoc.gender,
         });
       }
     );
@@ -184,22 +188,24 @@ app.delete("/deleteUser", authenticateToken, async (req, res) => {
 });
 //------------------------------------------------------------
 
-// <마이페이지 - 메인페이지>
+//<마이페이지-메인페이지>
 
 // 1. 사용자 정보 가져오기
 app.get("/getUserInfo", authenticateToken, async (req, res) => {
   try {
     console.log("Authenticated user:", req.user); // 디버깅 로그
     const user = await User.findById(req.user.id);
+    console.log("사용자정보 가져오기", user);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     const userInfo = {
-      userid: user.id,
+      userid: user.userid,
       username: user.username,
       userprofile: user.userprofile || null,
       shortBio: user.shortBio || null,
     };
+    console.log("마페 메인", userInfo);
     res.json(userInfo);
   } catch (error) {
     console.error("Error fetching user info:", error);
@@ -207,51 +213,42 @@ app.get("/getUserInfo", authenticateToken, async (req, res) => {
   }
 });
 
-// 2. 사용자 프로필 업데이트
-// app.post("/updateUserProfile", authenticateToken, async (req, res) => {
-//   try {
-//     const { username, shortBio, userprofile } = req.body;
-//     const updatedFields = { username, shortBio, userprofile };
-//     if (req.files && req.files.userprofile) {
-//       updatedFields.userprofile = req.files.userprofile[0].path;
-//     }
-//     const user = await User.findByIdAndUpdate(req.user.id, updatedFields, {
-//       new: true,
-//     });
-//     if (!user) return res.status(404).json({ message: "User not found" });
-//     res.json(user);
-//   } catch (error) {
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// });
-
-app.post("/updateUserProfile", authenticateToken, async (req, res) => {
-  try {
-    const { username, shortBio } = req.body;
-    const updatedFields = { username, shortBio };
-
-    if (req.files && req.files.userprofile) {
-      const userProfileFile = req.files.userprofile;
-      const uploadPath = path.join(
-        __dirname,
-        "uploads/codiLog",
-        `${Date.now()}${path.extname(userProfileFile.name)}`
-      );
-      await userProfileFile.mv(uploadPath);
-      updatedFields.userprofile = uploadPath; // userprofile 필드 업데이트
-    }
-
-    const user = await User.findByIdAndUpdate(req.user.id, updatedFields, {
-      new: true,
-    });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    res.json(user);
-  } catch (error) {
-    console.error("Error updating user profile:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
+// 프로필 이미지 저장 경로 multer 설정
+const profileImgUpload = multer.diskStorage({
+  destination: "uploads/profilImg/",
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
 });
+const profileImgUp = multer({ storage: profileImgUpload });
+
+//사용자 프로필 업데이트
+app.post(
+  "/updateUserProfile",
+  authenticateToken,
+  profileImgUp.single("userprofile"),
+  async (req, res) => {
+    try {
+      const { username, shortBio } = req.body;
+      const path = req.file ? req.file.path : null;
+      console.log("이미지 경로", path, "그외 정보", username, shortBio);
+
+      const user = await User.findByIdAndUpdate(
+        req.user.id,
+        { userprofile: path, username, shortBio },
+        {
+          new: true,
+        }
+      );
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+);
 
 //------------------------------------------------------------
 
@@ -476,7 +473,7 @@ app.post("/talkBox", async (req, res) => {
   // 날씨를 전달해주는 prompt
   let prompt = "";
   prompt += `오늘의 날씨를 제시해줄게. 현재기온 : ${temperature}°C, 최고기온/최저기온 : ${maxTemp}°C / ${minTemp}°C, 자외선 : ${uv}, 미세먼지 : ${dust}, 강수확률: ${popValue}%`;
-  prompt += `날씨는 3~4줄로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘.`;
+  prompt += `날씨는 3줄로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘.`;
   prompt += `주의할 점은 숫자로 된 수치정보는 언급하지 말고 아래의 기준에 맞춰서 답변해줘.
   1. 최저기온이 25°C 이상이면 겉옷 얘기 금지
   2. 미세먼지 값이 좋음 또는 보통이면 마스크 얘기 금지, 미세먼지 얘기 금지
@@ -545,22 +542,18 @@ app.post("/codiTalkBox", async (req, res) => {
     uv,
     clothes,
     selectedTemp,
+    gender,
   } = req.body;
-  // const { gender } = req.user; // authenticateToken 미들웨어에서 추가된 gender 정보 사용
-  // if (!gender) {
-  //   return res.status(400).json({ error: "Gender information is missing" });
-  // }
-  // console.log(gender);
 
   // 날씨를 전달해주는 prompt
   let codiPrompt = "";
   codiPrompt += `오늘의 날씨를 제시해줄게. 현재기온 : ${temperature}°C, 최고기온/최저기온 : ${maxTemp}°C / ${minTemp}°C, 자외선 : ${uv}, 미세먼지 : ${dust}, 강수확률: ${popValue}%`;
   codiPrompt += `오늘의 날씨와 비교해서 ${selectedTemp}한 코디를 알려줘`;
   codiPrompt += `코디 정보는 3줄 이내로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘`;
-  codiPrompt += `사용자의 성별은 여자야`;
+  codiPrompt += `사용자의 성별은 ${gender}`;
   codiPrompt += `사용자의 옷장에는 ${clothes} 이런 옷들이 들어있어. 이 옷장에 있는 옷들을 조합해서 추천해줘`;
   codiPrompt += `tops에는 각각 긴팔, 반팔, 민소매 종류로 있고, bottoms에는 각각 긴바지, 반바지 종류가 있어`;
-  codiPrompt += `주의할 점은 날씨에 관한 얘기는 하면 안 되고, 사용자의 성별이 여자일 경우에만 블라우스, 롱스커트, 미니스커트, 원피스를 제시해줘. 남자일 경우에는 저 코디를 제시받으면 안 돼`;
+  codiPrompt += `주의할 점은 날씨에 관한 얘기는 하면 안 되고, 사용자의 성별이 female일 경우에만 블라우스, 롱스커트, 미니스커트, 원피스를 제시해줘. male일 경우에는 저 코디를 제시받으면 안 돼`;
   codiPrompt += `시원한 코디를 알려줄 때, 현재기온과 최고기온이 25°C 이상일 때는 outers 종류는 추천하면 안 돼`;
   codiPrompt += `자외선이 아무리 높아도 자외선 차단제 얘기는 하면 안 돼`;
   codiPrompt += `신발 얘기는 강수확률이 60% 이상일 때만 "비오니까 장화 신고 가!" 덧붙여줘. 그 외에는 신발 얘기는 하면 안 돼`;

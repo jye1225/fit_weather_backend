@@ -40,7 +40,7 @@ mongoose
   .then(() => console.log("MongoDB Connected..."))
   .catch((err) => console.log(err));
 
-const User = require("./models/User"); // User 모델 생성
+const User = require("./models/user"); // User 모델 생성
 
 const salt = bcrypt.genSaltSync(10);
 const jwtSecret = process.env.JWT_SECRET; // 환경변수로 처리
@@ -109,7 +109,12 @@ app.post("/login", async (req, res) => {
   const passOK = bcrypt.compareSync(password, userDoc.password);
   if (passOK) {
     jwt.sign(
-      { userid, username: userDoc.username, id: userDoc._id },
+      {
+        userid,
+        username: userDoc.username,
+        id: userDoc._id,
+        // gender: userDoc.gender,
+      }, // gender 정보 추가
       jwtSecret,
       {},
       (err, token) => {
@@ -120,6 +125,7 @@ app.post("/login", async (req, res) => {
           id: userDoc._id,
           username: userDoc.username,
           userid,
+          // gender: userDoc.gender, // gender 정보 응답에 포함
         });
       }
     );
@@ -448,13 +454,18 @@ app.post("/codiTalkBox", async (req, res) => {
     clothes,
     selectedTemp,
   } = req.body;
+  // const { gender } = req.user; // authenticateToken 미들웨어에서 추가된 gender 정보 사용
+  // if (!gender) {
+  //   return res.status(400).json({ error: "Gender information is missing" });
+  // }
+  // console.log(gender);
 
   // 날씨를 전달해주는 prompt
   let codiPrompt = "";
   codiPrompt += `오늘의 날씨를 제시해줄게. 현재기온 : ${temperature}°C, 최고기온/최저기온 : ${maxTemp}°C / ${minTemp}°C, 자외선 : ${uv}, 미세먼지 : ${dust}, 강수확률: ${popValue}%`;
   codiPrompt += `오늘의 날씨와 비교해서 ${selectedTemp}한 코디를 알려줘`;
   codiPrompt += `코디 정보는 3줄 이내로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘`;
-  codiPrompt += `사용자의 성별은 여자`;
+  codiPrompt += `사용자의 성별은 여자야`;
   codiPrompt += `사용자의 옷장에는 ${clothes} 이런 옷들이 들어있어. 이 옷장에 있는 옷들을 조합해서 추천해줘`;
   codiPrompt += `tops에는 각각 긴팔, 반팔, 민소매 종류로 있고, bottoms에는 각각 긴바지, 반바지 종류가 있어`;
   codiPrompt += `주의할 점은 날씨에 관한 얘기는 하면 안 되고, 사용자의 성별이 여자일 경우에만 블라우스, 롱스커트, 미니스커트, 원피스를 제시해줘. 남자일 경우에는 저 코디를 제시받으면 안 돼`;
@@ -498,7 +509,7 @@ async function callCodiAI(codiPrompt) {
         { role: "user", content: codiPrompt },
       ],
       max_tokens: 1000, // 돈 많이 나갈까봐 글자수 제한;
-      temperature: 0.8, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 안전한 선택을, 1.0에 가까울수록 더 창의적인 선택을 함.
+      temperature: 0.5, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 안전한 선택을, 1.0에 가까울수록 더 창의적인 선택을 함.
       top_p: 1, // 0.0 ~ 1.0 사이의 값. 1.0에 가까울수록 다양한 선택을 함.
       frequency_penalty: 0.0, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 반복적인 선택을 함.
       presence_penalty: 0.0, // 0.0 ~ 1.0 사이의 값. 0.0에 가까울수록 더 새로운 선택을 함.
@@ -516,6 +527,7 @@ async function callCodiAI(codiPrompt) {
 // ---- 마이페이지 - 내 커뮤니티 활동 - 시작 -------
 
 const CommuCollRouter = require("./routes/commuColl.js");
+const { log } = require("console");
 app.use("/mypage", CommuCollRouter);
 
 // ---- 마이페이지 - 내 커뮤니티 활동 - 끝 ---------

@@ -40,7 +40,7 @@ mongoose
   .then(() => console.log("MongoDB Connected..."))
   .catch((err) => console.log(err));
 
-const User = require("./models/User"); // User 모델 생성
+const User = require("./models/user"); // User 모델 생성
 
 const salt = bcrypt.genSaltSync(10);
 const jwtSecret = process.env.JWT_SECRET; // 환경변수로 처리

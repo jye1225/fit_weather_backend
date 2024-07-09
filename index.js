@@ -42,7 +42,6 @@ mongoose
 
 const User = require("./models/user"); // User 모델 생성
 const CodiLogModel = require("./models/codiLog.js");
-
 const salt = bcrypt.genSaltSync(10);
 const jwtSecret = process.env.JWT_SECRET;
 

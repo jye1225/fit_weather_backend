@@ -144,7 +144,6 @@ app.post("/login", async (req, res) => {
     res.json({ message: "failed" });
   }
 });
-
 // 2. 로그아웃 기능
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json();
@@ -215,33 +214,73 @@ app.get("/getUserInfo", authenticateToken, async (req, res) => {
 
 // 프로필 이미지 저장 경로 multer 설정
 const profileImgUpload = multer.diskStorage({
-  destination: "uploads/profilImg/",
+  destination: (req, file, cb) => {
+    cb(null, "uploads/profilImg/");
+  },
+//   destination: "uploads/profilImg/",
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
   },
 });
 const profileImgUp = multer({ storage: profileImgUpload });
 
-app.post("/updateUserProfile", authenticateToken, profileImgUp.single('userprofile'), async (req, res) => {
-  try {
-    const { username, shortBio } = req.body;
-    const path = req.file ? req.file.path : null;
-    console.log('이미지 경로', path, '그외 정보', username, shortBio);
+app.post(
+  "/updateUserProfile",
+  authenticateToken,
+  profileImgUp.single("userprofile"),
+  async (req, res) => {
+    try {
+      const { username, shortBio } = req.body;
+      const filePath = req.file
+        ? `/uploads/profilImg/${req.file.filename}`
+        : null;
+      console.log("이미지 경로:", filePath);
+      console.log("업데이트할 사용자 정보:", { username, shortBio });
+
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        console.log("사용자를 찾을 수 없습니다:", req.user.id);
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      user.username = username;
+      user.shortBio = shortBio;
+      if (filePath) {
+        user.userprofile = filePath;
+      }
+
+      await user.save();
+      console.log("업데이트된 사용자 정보:", user);
+
+// app.post("/updateUserProfile", authenticateToken, profileImgUp.single('userprofile'), async (req, res) => {
+//   try {
+//     const { username, shortBio } = req.body;
+//     const path = req.file ? req.file.path : null;
+//     console.log('이미지 경로', path, '그외 정보', username, shortBio);
 
 
-    const user = await User.findByIdAndUpdate(req.user.id, { userprofile: path, username, shortBio }, {
-      new: true,
-    });
-    if (!user) return res.status(404).json({ message: "User not found" });
+//     const user = await User.findByIdAndUpdate(req.user.id, { userprofile: path, username, shortBio }, {
+//       new: true,
+//     });
+//     if (!user) return res.status(404).json({ message: "User not found" });
+
+//       res.json(user);
+//     } catch (error) {
+//       console.error("Error updating user profile:", error);
+//       res.status(500).json({ message: "Internal server error" });
+//     }
+//   }
+// );
 
       res.json(user);
     } catch (error) {
-      console.error("Error updating user profile:", error);
-      res.status(500).json({ message: "Internal server error" });
+      console.error("프로필 업데이트 중 오류 발생:", error);
+      res
+        .status(500)
+        .json({ message: "Internal server error", error: error.message });
     }
   }
 );
-
 //------------------------------------------------------------
 
 /// ~~~~~~~~~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~~~~~~~~

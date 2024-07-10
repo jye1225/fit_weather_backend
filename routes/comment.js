@@ -55,9 +55,9 @@ module.exports = function (User) {
       // 각 댓글 객체에 userProfileImg를 추가합니다.
       const cmntListWithProfileImgs = cmntList.map(comment => {
         const user = userInfoMap[comment.userId];
-        return {
+        return result = {
           ...comment._doc, // Mongoose 문서 객체에서 순수 자바스크립트 객체로 변환
-          userProfileImg: user ? user.profile_image : null,
+          userProfileImg: user ? user.userprofile : null,
         };
       });
 

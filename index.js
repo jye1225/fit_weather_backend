@@ -108,7 +108,7 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
   const { userid, password } = req.body;
   const userDoc = await User.findOne({ userid });
-  console.log("유저문서", userDoc);
+  console.log('유저문서', userDoc);
 
   if (!userDoc) {
     res.json({ message: "nouser" });
@@ -195,7 +195,7 @@ app.get("/getUserInfo", authenticateToken, async (req, res) => {
   try {
     console.log("Authenticated user:", req.user); // 디버깅 로그
     const user = await User.findById(req.user.id);
-    console.log("사용자정보 가져오기", user);
+    console.log('사용자정보 가져오기', user);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -205,7 +205,7 @@ app.get("/getUserInfo", authenticateToken, async (req, res) => {
       userprofile: user.userprofile || null,
       shortBio: user.shortBio || null,
     };
-    console.log("마페 메인", userInfo);
+    console.log('마페 메인', userInfo);
     res.json(userInfo);
   } catch (error) {
     console.error("Error fetching user info:", error);
@@ -222,24 +222,17 @@ const profileImgUpload = multer.diskStorage({
 });
 const profileImgUp = multer({ storage: profileImgUpload });
 
-app.post(
-  "/updateUserProfile",
-  authenticateToken,
-  profileImgUp.single("userprofile"),
-  async (req, res) => {
-    try {
-      const { username, shortBio } = req.body;
-      const path = req.file ? req.file.path : null;
-      console.log("이미지 경로", path, "그외 정보", username, shortBio);
+app.post("/updateUserProfile", authenticateToken, profileImgUp.single('userprofile'), async (req, res) => {
+  try {
+    const { username, shortBio } = req.body;
+    const path = req.file ? req.file.path : null;
+    console.log('이미지 경로', path, '그외 정보', username, shortBio);
 
-      const user = await User.findByIdAndUpdate(
-        req.user.id,
-        { userprofile: path, username, shortBio },
-        {
-          new: true,
-        }
-      );
-      if (!user) return res.status(404).json({ message: "User not found" });
+
+    const user = await User.findByIdAndUpdate(req.user.id, { userprofile: path, username, shortBio }, {
+      new: true,
+    });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
       res.json(user);
     } catch (error) {

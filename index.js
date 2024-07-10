@@ -146,6 +146,39 @@ app.post("/login", async (req, res) => {
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json();
 });
+
+// 3. 아이디, 닉네임 중복확인 기능
+app.post("/check-duplicate-id", async (req, res) => {
+  const { userid } = req.body;
+
+  try {
+    const userById = await User.findOne({ userid });
+
+    if (userById) {
+      return res.status(400).json({ message: "아이디가 이미 존재합니다." });
+    }
+
+    res.json({ message: "사용 가능한 아이디입니다." });
+  } catch (e) {
+    res.status(500).json({ message: "서버 오류", error: e.message });
+  }
+});
+
+app.post("/check-duplicate-username", async (req, res) => {
+  const { username } = req.body;
+
+  try {
+    const userByUsername = await User.findOne({ username });
+
+    if (userByUsername) {
+      return res.status(400).json({ message: "닉네임이 이미 존재합니다." });
+    }
+
+    res.json({ message: "사용 가능한 닉네임입니다." });
+  } catch (e) {
+    res.status(500).json({ message: "서버 오류", error: e.message });
+  }
+});
 //---------------------------------------------------
 
 // <마이페이지 - 개인정보 수정 페이지>

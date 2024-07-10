@@ -9,7 +9,6 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const fileUpload = require("express-fileupload");
 
 // express
 const app = express();
@@ -33,7 +32,6 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(fileUpload());
 
 // MongoDB 연결
 const mongoURI = process.env.MONGODB_URI;

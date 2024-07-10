@@ -63,7 +63,7 @@ const authenticateToken = (req, res, next) => {
 
 // 1. 카카오 회원가입 기능
 app.post("/kakao-register", async (req, res) => {
-  const { userid, username, profile_image } = req.body;
+  const { userid, username, userprofile } = req.body;
   console.log(req.body);
 
   try {
@@ -71,7 +71,7 @@ app.post("/kakao-register", async (req, res) => {
       userid,
       username,
       password: String(Math.floor(Math.random() * 1000000)),
-      profile_image,
+      userprofile,
     });
     console.log("문서", userDoc);
     res.json(userDoc);

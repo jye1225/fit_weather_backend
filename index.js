@@ -122,6 +122,7 @@ app.post("/login", async (req, res) => {
         id: userDoc._id,
         shortBio: userDoc.shortBio,
         gender: userDoc.gender,
+        userprofile: userDoc.userprofile
       },
       jwtSecret,
       {},
@@ -135,6 +136,7 @@ app.post("/login", async (req, res) => {
           userid,
           shortBio: userDoc.shortBio,
           gender: userDoc.gender,
+          userprofile: userDoc.userprofile
         });
       }
     );

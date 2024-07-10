@@ -9,6 +9,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const fileUpload = require("express-fileupload");
 
 // express
 const app = express();
@@ -32,6 +33,7 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(fileUpload());
 
 // MongoDB 연결
 const mongoURI = process.env.MONGODB_URI;
@@ -121,7 +123,7 @@ app.post("/login", async (req, res) => {
         username: userDoc.username,
         id: userDoc._id,
         shortBio: userDoc.shortBio,
-        gender: userDoc.gender
+        gender: userDoc.gender,
       },
       jwtSecret,
       {},
@@ -134,7 +136,7 @@ app.post("/login", async (req, res) => {
           username: userDoc.username,
           userid,
           shortBio: userDoc.shortBio,
-          gender: userDoc.gender
+          gender: userDoc.gender,
         });
       }
     );
@@ -211,7 +213,6 @@ app.get("/getUserInfo", authenticateToken, async (req, res) => {
   }
 });
 
-
 // 프로필 이미지 저장 경로 multer 설정
 const profileImgUpload = multer.diskStorage({
   destination: "uploads/profilImg/",
@@ -233,12 +234,13 @@ app.post("/updateUserProfile", authenticateToken, profileImgUp.single('userprofi
     });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json(user);
-  } catch (error) {
-    console.error("Error updating user profile:", error);
-    res.status(500).json({ message: "Internal server error" });
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
   }
-});
+);
 
 //------------------------------------------------------------
 
@@ -463,7 +465,7 @@ app.post("/talkBox", async (req, res) => {
   // 날씨를 전달해주는 prompt
   let prompt = "";
   prompt += `오늘의 날씨를 제시해줄게. 현재기온 : ${temperature}°C, 최고기온/최저기온 : ${maxTemp}°C / ${minTemp}°C, 자외선 : ${uv}, 미세먼지 : ${dust}, 강수확률: ${popValue}%`;
-  prompt += `날씨는 3~4줄로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘.`;
+  prompt += `날씨는 3줄로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘.`;
   prompt += `주의할 점은 숫자로 된 수치정보는 언급하지 말고 아래의 기준에 맞춰서 답변해줘.
   1. 최저기온이 25°C 이상이면 겉옷 얘기 금지
   2. 미세먼지 값이 좋음 또는 보통이면 마스크 얘기 금지, 미세먼지 얘기 금지
@@ -532,22 +534,18 @@ app.post("/codiTalkBox", async (req, res) => {
     uv,
     clothes,
     selectedTemp,
+    gender,
   } = req.body;
-  // const { gender } = req.user; // authenticateToken 미들웨어에서 추가된 gender 정보 사용
-  // if (!gender) {
-  //   return res.status(400).json({ error: "Gender information is missing" });
-  // }
-  // console.log(gender);
 
   // 날씨를 전달해주는 prompt
   let codiPrompt = "";
   codiPrompt += `오늘의 날씨를 제시해줄게. 현재기온 : ${temperature}°C, 최고기온/최저기온 : ${maxTemp}°C / ${minTemp}°C, 자외선 : ${uv}, 미세먼지 : ${dust}, 강수확률: ${popValue}%`;
   codiPrompt += `오늘의 날씨와 비교해서 ${selectedTemp}한 코디를 알려줘`;
   codiPrompt += `코디 정보는 3줄 이내로 요약해서 말해줘야 하고, 친구에게 말하듯이 친근한 말투로 말해줘`;
-  codiPrompt += `사용자의 성별은 여자야`;
+  codiPrompt += `사용자의 성별은 ${gender}`;
   codiPrompt += `사용자의 옷장에는 ${clothes} 이런 옷들이 들어있어. 이 옷장에 있는 옷들을 조합해서 추천해줘`;
   codiPrompt += `tops에는 각각 긴팔, 반팔, 민소매 종류로 있고, bottoms에는 각각 긴바지, 반바지 종류가 있어`;
-  codiPrompt += `주의할 점은 날씨에 관한 얘기는 하면 안 되고, 사용자의 성별이 여자일 경우에만 블라우스, 롱스커트, 미니스커트, 원피스를 제시해줘. 남자일 경우에는 저 코디를 제시받으면 안 돼`;
+  codiPrompt += `주의할 점은 날씨에 관한 얘기는 하면 안 되고, 사용자의 성별이 female일 경우에만 블라우스, 롱스커트, 미니스커트, 원피스를 제시해줘. male일 경우에는 저 코디를 제시받으면 안 돼`;
   codiPrompt += `시원한 코디를 알려줄 때, 현재기온과 최고기온이 25°C 이상일 때는 outers 종류는 추천하면 안 돼`;
   codiPrompt += `자외선이 아무리 높아도 자외선 차단제 얘기는 하면 안 돼`;
   codiPrompt += `신발 얘기는 강수확률이 60% 이상일 때만 "비오니까 장화 신고 가!" 덧붙여줘. 그 외에는 신발 얘기는 하면 안 돼`;

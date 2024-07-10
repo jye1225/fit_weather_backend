@@ -9,6 +9,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const fileUpload = require("express-fileupload");
 
 // express
 const app = express();
@@ -32,6 +33,7 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(fileUpload());
 
 // MongoDB 연결
 const mongoURI = process.env.MONGODB_URI;
@@ -106,7 +108,7 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
   const { userid, password } = req.body;
   const userDoc = await User.findOne({ userid });
-  console.log("로그인한 유저 정보", req.body);
+  console.log("유저문서", userDoc);
 
   if (!userDoc) {
     res.json({ message: "nouser" });
@@ -120,6 +122,7 @@ app.post("/login", async (req, res) => {
         userid,
         username: userDoc.username,
         id: userDoc._id,
+        shortBio: userDoc.shortBio,
         gender: userDoc.gender,
       },
       jwtSecret,
@@ -132,7 +135,8 @@ app.post("/login", async (req, res) => {
           id: userDoc._id,
           username: userDoc.username,
           userid,
-          gender: userDoc.gender, // gender 값을 포함
+          shortBio: userDoc.shortBio,
+          gender: userDoc.gender,
         });
       }
     );
@@ -191,15 +195,17 @@ app.get("/getUserInfo", authenticateToken, async (req, res) => {
   try {
     console.log("Authenticated user:", req.user); // 디버깅 로그
     const user = await User.findById(req.user.id);
+    console.log("사용자정보 가져오기", user);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     const userInfo = {
-      userid: user.id,
+      userid: user.userid,
       username: user.username,
       userprofile: user.userprofile || null,
       shortBio: user.shortBio || null,
     };
+    console.log("마페 메인", userInfo);
     res.json(userInfo);
   } catch (error) {
     console.error("Error fetching user info:", error);
@@ -207,51 +213,41 @@ app.get("/getUserInfo", authenticateToken, async (req, res) => {
   }
 });
 
-// 2. 사용자 프로필 업데이트
-// app.post("/updateUserProfile", authenticateToken, async (req, res) => {
-//   try {
-//     const { username, shortBio, userprofile } = req.body;
-//     const updatedFields = { username, shortBio, userprofile };
-//     if (req.files && req.files.userprofile) {
-//       updatedFields.userprofile = req.files.userprofile[0].path;
-//     }
-//     const user = await User.findByIdAndUpdate(req.user.id, updatedFields, {
-//       new: true,
-//     });
-//     if (!user) return res.status(404).json({ message: "User not found" });
-//     res.json(user);
-//   } catch (error) {
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// });
-
-app.post("/updateUserProfile", authenticateToken, async (req, res) => {
-  try {
-    const { username, shortBio } = req.body;
-    const updatedFields = { username, shortBio };
-
-    if (req.files && req.files.userprofile) {
-      const userProfileFile = req.files.userprofile;
-      const uploadPath = path.join(
-        __dirname,
-        "uploads/codiLog",
-        `${Date.now()}${path.extname(userProfileFile.name)}`
-      );
-      await userProfileFile.mv(uploadPath);
-      updatedFields.userprofile = uploadPath; // userprofile 필드 업데이트
-    }
-
-    const user = await User.findByIdAndUpdate(req.user.id, updatedFields, {
-      new: true,
-    });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    res.json(user);
-  } catch (error) {
-    console.error("Error updating user profile:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
+// 프로필 이미지 저장 경로 multer 설정
+const profileImgUpload = multer.diskStorage({
+  destination: "uploads/profilImg/",
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
 });
+const profileImgUp = multer({ storage: profileImgUpload });
+
+app.post(
+  "/updateUserProfile",
+  authenticateToken,
+  profileImgUp.single("userprofile"),
+  async (req, res) => {
+    try {
+      const { username, shortBio } = req.body;
+      const path = req.file ? req.file.path : null;
+      console.log("이미지 경로", path, "그외 정보", username, shortBio);
+
+      const user = await User.findByIdAndUpdate(
+        req.user.id,
+        { userprofile: path, username, shortBio },
+        {
+          new: true,
+        }
+      );
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+);
 
 //------------------------------------------------------------
 

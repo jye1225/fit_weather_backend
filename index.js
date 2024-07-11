@@ -45,7 +45,7 @@ const CodiLogModel = require("./models/codiLog.js");
 const salt = bcrypt.genSaltSync(10);
 const jwtSecret = process.env.JWT_SECRET;
 
-// JWT 토큰을 검증하는 `authenticateToken` 미들웨어
+// JWT 토큰을 검증하는 authenticateToken 미들웨어
 const authenticateToken = (req, res, next) => {
   const token = req.query.token; // 쿼리 파라미터에서 토큰을 가져옴
   if (token == null) return res.sendStatus(401);
@@ -72,7 +72,6 @@ app.post("/kakao-register", async (req, res) => {
       username,
       password: String(Math.floor(Math.random() * 1000000)),
       userprofile,
-      isKakaoLogin: true, // 카카오 로그인 여부 추가
     });
     console.log("문서", userDoc);
     res.json(userDoc);
@@ -266,7 +265,7 @@ app.post(
     try {
       const { username, shortBio } = req.body;
       const filePath = req.file
-        ? `/uploads/profilImg/${req.file.filename}`
+        ? /uploads/profilImg/${req.file.filename}
         : null;
       console.log("이미지 경로:", filePath);
       console.log("업데이트할 사용자 정보:", { username, shortBio });
@@ -315,7 +314,7 @@ app.post(
     }
   }
 );
-//------------------------------------------------------------
+//-----------------------------------------------------------
 
 /// ~~~~~~~~~~~~~~~~~~~~~~ 나영 부분 시작~~~~~~~~~~~~~~~~~~~~~
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

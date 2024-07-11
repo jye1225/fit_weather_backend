@@ -72,6 +72,7 @@ app.post("/kakao-register", async (req, res) => {
       username,
       password: String(Math.floor(Math.random() * 1000000)),
       userprofile,
+      isKakaoLogin: true, // 카카오 로그인 여부 추가
     });
     console.log("문서", userDoc);
     res.json(userDoc);
